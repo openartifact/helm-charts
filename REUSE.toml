@@ -8,6 +8,7 @@ SPDX-PackageDownloadLocation = "https://github.com/openartifact/helm-charts"
 path = [
   "charts/*/values.schema.json",
   "charts/*/templates/NOTES.txt",
+  "tools/go.sum",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "The OpenArtifact Authors"
