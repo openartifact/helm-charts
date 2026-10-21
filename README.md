@@ -5,6 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # OpenArtifact Helm charts
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/openartifact)](https://artifacthub.io/packages/search?repo=openartifact)
+
 Helm charts for [OpenArtifact](https://github.com/openartifact/openartifact).
 
 | Chart | Description |

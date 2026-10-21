@@ -5,6 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # openartifact
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/openartifact)](https://artifacthub.io/packages/helm/openartifact/openartifact)
+
 Helm chart for [OpenArtifact](https://github.com/openartifact/openartifact), the
 free-as-in-freedom artifact repository manager (Maven, npm, PyPI, Docker/OCI, Helm,
 Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan and more).
