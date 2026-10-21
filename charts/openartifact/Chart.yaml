@@ -29,6 +29,9 @@ maintainers:
     url: https://github.com/openartifact
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial chart for OpenArtifact 0.2.0 with external PostgreSQL or CloudNativePG, filesystem and object storage backends, Ingress and Gateway API exposure.
   artifacthub.io/images: |
     - name: openartifact
       image: ghcr.io/openartifact/openartifact:0.2.0
