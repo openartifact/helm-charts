@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Trivy configuration used by the "security" job (misconfiguration scan of the
+# rendered chart). Trivy renders the Helm chart with these values.
+misconfiguration:
+  helm:
+    values:
+      - charts/openartifact/ci/cnpg-values.yaml

@@ -2,9 +2,29 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+# Actions are pinned by commit SHA (+ `# vX.Y.Z` comment); actionlint is a
+# `tool` directive in tools/go.mod. Not tracked by Dependabot: HELM_VERSION and
+# CNPG_CHART_VERSION in the workflows.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: gomod
+    directory: /tools
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      go-tools:
+        patterns: ["*"]
+        update-types: [minor, patch]

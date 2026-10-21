@@ -22,17 +22,22 @@ env:
 
 jobs:
   lint-test:
+    name: lint and install charts
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EVENT_NAME: ${{ github.event_name }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.x"
           check-latest: true
@@ -42,7 +47,7 @@ jobs:
       - name: List changed charts
         id: list-changed
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$EVENT_NAME" = "push" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -54,7 +59,7 @@ jobs:
       - name: Lint
         if: steps.list-changed.outputs.changed == 'true'
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$EVENT_NAME" = "push" ]; then
             ct lint --config ct.yaml --all --check-version-increment=false
           else
             ct lint --config ct.yaml
@@ -83,7 +88,7 @@ jobs:
       - name: Install and test
         if: steps.list-changed.outputs.changed == 'true'
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$EVENT_NAME" = "push" ]; then
             ct install --config ct.yaml --all
           else
             ct install --config ct.yaml
