@@ -1,0 +1,43 @@
+apiVersion: v1
+entries:
+  openartifact:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial chart for OpenArtifact 0.2.0 with external PostgreSQL or CloudNativePG, filesystem and object storage backends, Ingress and Gateway API exposure.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.2.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+    apiVersion: v2
+    appVersion: 0.2.0
+    created: "2026-10-21T09:51:44.284776523Z"
+    description: 'Enterprise-grade, free-as-in-freedom artifact repository manager:
+      Maven, npm, PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems,
+      Conda, Conan and more.'
+    digest: c8f47de35d236415dcc732792810f8fe3b785771661acad17ad861381ddc0b52
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-10-21T09:51:44.284789347Z"
