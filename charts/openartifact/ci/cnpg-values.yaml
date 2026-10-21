@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Used by chart-testing (ct install) in CI; requires the CloudNativePG operator.
+baseUrl: http://openartifact.local
+cnpg:
+  enabled: true
+  storage:
+    size: 1Gi
+persistence:
+  size: 1Gi

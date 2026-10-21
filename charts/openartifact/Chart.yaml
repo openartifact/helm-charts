@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+apiVersion: v2
+name: openartifact
+description: >-
+  Enterprise-grade, free-as-in-freedom artifact repository manager: Maven, npm,
+  PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan
+  and more.
+type: application
+version: 0.1.0
+appVersion: "0.2.0"
+kubeVersion: ">=1.29.0-0"
+home: https://github.com/openartifact/openartifact
+icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/logo.png
+sources:
+  - https://github.com/openartifact/openartifact
+  - https://github.com/openartifact/helm-charts
+keywords:
+  - artifact-repository
+  - maven
+  - npm
+  - pypi
+  - oci
+  - registry
+maintainers:
+  - name: The OpenArtifact Authors
+    url: https://github.com/openartifact
+annotations:
+  artifacthub.io/license: AGPL-3.0-or-later
+  artifacthub.io/images: |
+    - name: openartifact
+      image: ghcr.io/openartifact/openartifact:0.2.0
+      platforms:
+        - linux/amd64
+        - linux/arm64

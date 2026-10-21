@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Lint and test charts
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  HELM_VERSION: v4.3.1
+  CNPG_CHART_VERSION: 0.29.1
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.x"
+          check-latest: true
+
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
+
+      - name: List changed charts
+        id: list-changed
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(ct list-changed --config ct.yaml)
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ct lint --config ct.yaml --all --check-version-increment=false
+          else
+            ct lint --config ct.yaml
+          fi
+
+      - name: Reject unvalidated failure modes
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          # Multi-replica filesystem storage on a ReadWriteOnce volume must not render.
+          if helm template t charts/openartifact --set database.external.host=pg --set replicaCount=2 >/dev/null 2>&1; then
+            echo "expected render failure for replicaCount=2 on ReadWriteOnce filesystem storage" >&2
+            exit 1
+          fi
+
+      - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        if: steps.list-changed.outputs.changed == 'true'
+
+      - name: Install CloudNativePG operator
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          helm install cnpg cloudnative-pg \
+            --repo https://cloudnative-pg.github.io/charts \
+            --version "$CNPG_CHART_VERSION" \
+            --namespace cnpg-system --create-namespace --wait
+
+      - name: Install and test
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ct install --config ct.yaml --all
+          else
+            ct install --config ct.yaml
+          fi

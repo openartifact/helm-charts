@@ -1,0 +1,346 @@
+{{- /*
+SPDX-FileCopyrightText: The OpenArtifact Authors
+SPDX-License-Identifier: AGPL-3.0-or-later
+*/ -}}
+{{- include "openartifact.validate" . }}
+{{- $fullname := include "openartifact.fullname" . }}
+{{- $fs := include "openartifact.filesystemStorage" . }}
+{{- $storageCreds := include "openartifact.storageCredentials" . | fromYaml }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "openartifact.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+    {{- if .Values.updateStrategy }}
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+    {{- else if include "openartifact.singleWriterVolume" . }}
+    type: Recreate
+    {{- else }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openartifact.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secrets: {{ list .Values.secrets .Values.storage.credentials .Values.database.external.password .Values.metrics.authToken | toYaml | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "openartifact.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "openartifact.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if or .Values.database.waitForDatabase .Values.extraInitContainers }}
+      initContainers:
+        {{- if .Values.database.waitForDatabase }}
+        - name: wait-for-database
+          image: {{ include "openartifact.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z -w 2 "$DB_HOST" "$DB_PORT"; do
+                echo "waiting for database $DB_HOST:$DB_PORT"
+                sleep 2
+              done
+          env:
+            - name: DB_HOST
+              value: {{ include "openartifact.dbHost" . | quote }}
+            - name: DB_PORT
+              value: {{ include "openartifact.dbPort" . | quote }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+        {{- end }}
+        {{- with .Values.extraInitContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: openartifact
+          image: {{ include "openartifact.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "openartifact.secretName" . }}
+            {{- if or .Values.storage.credentials.existingSecret $storageCreds }}
+            - secretRef:
+                name: {{ include "openartifact.storageSecretName" . }}
+            {{- end }}
+            {{- with .Values.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SERVER_SHUTDOWN_TIMEOUT
+              value: {{ .Values.config.shutdownTimeout | quote }}
+            {{- with .Values.baseUrl }}
+            - name: BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            - name: LOG_FORMAT
+              value: {{ .Values.config.logFormat | quote }}
+            - name: LOG_OUTPUT
+              value: stdout
+            - name: ALLOW_ANONYMOUS_READ
+              value: {{ .Values.config.allowAnonymousRead | quote }}
+            - name: LEGACY_API_KEY_ENABLED
+              value: {{ .Values.config.legacyApiKeyEnabled | quote }}
+            - name: SESSION_DURATION_HOURS
+              value: {{ .Values.config.sessionDurationHours | quote }}
+            {{- with .Values.config.corsOrigins }}
+            - name: CORS_ORIGINS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.config.trustedProxies }}
+            - name: OPENARTIFACT_TRUSTED_PROXIES
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with .Values.config.ipAllowlist }}
+            - name: OPENARTIFACT_IP_ALLOWLIST
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: OPENARTIFACT_RATE_LIMIT_RPS
+              value: {{ .Values.config.rateLimitRps | quote }}
+            - name: MIGRATE_ON_START
+              value: {{ .Values.config.migrateOnStart | quote }}
+            {{- if .Values.metrics.enabled }}
+            - name: METRICS_ALLOW_ANONYMOUS
+              value: "false"
+            {{- end }}
+            # Database
+            - name: DB_DRIVER
+              value: postgres
+            - name: DB_HOST
+              value: {{ include "openartifact.dbHost" . | quote }}
+            - name: DB_PORT
+              value: {{ include "openartifact.dbPort" . | quote }}
+            - name: DB_SSLMODE
+              value: {{ .Values.database.sslMode | quote }}
+            - name: DB_MAX_OPEN_CONNS
+              value: {{ .Values.database.maxOpenConns | quote }}
+            - name: DB_MAX_IDLE_CONNS
+              value: {{ .Values.database.maxIdleConns | quote }}
+            - name: DB_CONN_MAX_LIFETIME_MINUTES
+              value: {{ .Values.database.connMaxLifetimeMinutes | quote }}
+            {{- if .Values.cnpg.enabled }}
+            - name: DB_NAME
+              value: {{ .Values.cnpg.database | quote }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openartifact.cnpgClusterName" . }}-app
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openartifact.cnpgClusterName" . }}-app
+                  key: password
+            {{- else }}
+            - name: DB_NAME
+              value: {{ .Values.database.external.name | quote }}
+            - name: DB_USER
+              value: {{ .Values.database.external.user | quote }}
+            {{- with .Values.database.external.existingSecret }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $.Values.database.external.existingSecretPasswordKey }}
+            {{- end }}
+            {{- end }}
+            # Storage
+            - name: STORAGE_BACKEND
+              value: {{ .Values.storage.type | quote }}
+            {{- if $fs }}
+            - name: STORAGE_PATH
+              value: {{ .Values.storage.path | quote }}
+            {{- end }}
+            {{- with .Values.storage.bucket }}
+            - name: STORAGE_BUCKET
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.region }}
+            - name: STORAGE_REGION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.endpoint }}
+            - name: STORAGE_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.storage.forcePathStyle }}
+            - name: STORAGE_S3_FORCE_PATH_STYLE
+              value: "true"
+            {{- end }}
+            {{- with .Values.storage.presignTtl }}
+            - name: STORAGE_S3_PRESIGN_TTL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.gcs.bucket }}
+            - name: OPENARTIFACT_GCS_BUCKET
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.azure.accountName }}
+            - name: OPENARTIFACT_AZURE_ACCOUNT_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.azure.containerName }}
+            - name: OPENARTIFACT_AZURE_CONTAINER_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.storage.oci.insecure }}
+            - name: STORAGE_OCI_INSECURE
+              value: "true"
+            {{- end }}
+            - name: OPENARTIFACT_BACKUP_DIR
+              value: {{ .Values.backups.path | quote }}
+            # GPG
+            - name: GPG_ENABLED
+              value: {{ .Values.gpg.enabled | quote }}
+            {{- if .Values.gpg.enabled }}
+            - name: GPG_KEY_PATH
+              value: /etc/openartifact/gpg/private.key
+            - name: GPG_PASSPHRASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gpg.existingSecret }}
+                  key: passphrase
+                  optional: true
+            {{- end }}
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | toString | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if $fs }}
+            - name: data
+              mountPath: {{ .Values.storage.path }}
+            {{- end }}
+            - name: backups
+              mountPath: {{ .Values.backups.path }}
+            {{- if .Values.gpg.enabled }}
+            - name: gpg
+              mountPath: /etc/openartifact/gpg
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if $fs }}
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" $fullname) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        - name: backups
+          {{- if .Values.backups.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.backups.persistence.existingClaim | default (printf "%s-backups" $fullname) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.gpg.enabled }}
+        - name: gpg
+          secret:
+            secretName: {{ .Values.gpg.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: private.key
+                path: private.key
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- if .Values.affinity }}
+        {{- toYaml .Values.affinity | nindent 8 }}
+        {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "openartifact.selectorLabels" . | nindent 20 }}
+        {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

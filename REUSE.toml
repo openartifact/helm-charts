@@ -1,0 +1,14 @@
+version = 1
+SPDX-PackageName = "OpenArtifact Helm charts"
+SPDX-PackageSupplier = "The OpenArtifact Authors"
+SPDX-PackageDownloadLocation = "https://github.com/openartifact/helm-charts"
+
+# Files that cannot carry comment headers (JSON) or are rendered verbatim (NOTES.txt).
+[[annotations]]
+path = [
+  "charts/*/values.schema.json",
+  "charts/*/templates/NOTES.txt",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The OpenArtifact Authors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

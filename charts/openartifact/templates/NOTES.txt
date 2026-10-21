@@ -1,0 +1,30 @@
+OpenArtifact {{ .Chart.AppVersion }} has been deployed as release "{{ .Release.Name }}".
+
+{{- if .Values.ingress.enabled }}
+URL: {{ if .Values.ingress.tls }}https{{ else }}http{{ end }}://{{ (first .Values.ingress.hosts).host }}
+{{- else if .Values.httpRoute.enabled }}
+Exposed through HTTPRoute {{ include "openartifact.fullname" . }}{{ with .Values.httpRoute.hostnames }} ({{ join ", " . }}){{ end }}.
+{{- else }}
+Reach it locally with:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openartifact.fullname" . }} 8080:{{ .Values.service.port }}
+  open http://127.0.0.1:8080
+{{- end }}
+{{- if not .Values.baseUrl }}
+
+WARNING: baseUrl is not set. Set it to the public URL so OIDC/SAML callbacks and
+generated links are correct.
+{{- end }}
+{{- if and (include "openartifact.filesystemStorage" .) (not .Values.persistence.enabled) }}
+
+WARNING: persistence is disabled; artifacts are stored in an emptyDir and are lost
+when the pod is rescheduled.
+{{- end }}
+{{- if and (not .Values.secrets.existingSecret) .Values.secrets.keepOnUninstall }}
+
+The Secret {{ include "openartifact.fullname" . }} holds OPENARTIFACT_SECRET_KEY, which encrypts
+stored credentials. Back it up; it is kept on `helm uninstall`.
+{{- end }}
+{{- if .Values.cnpg.enabled }}
+
+PostgreSQL is provided by the CloudNativePG Cluster {{ include "openartifact.cnpgClusterName" . }}.
+{{- end }}

@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# chart-testing configuration: https://github.com/helm/chart-testing
+target-branch: main
+remote: origin
+chart-dirs:
+  - charts
+check-version-increment: true
+# Maintainers are organizations, not individual GitHub accounts.
+validate-maintainers: false
+helm-extra-args: --timeout 600s

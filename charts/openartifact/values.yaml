@@ -1,0 +1,309 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# -- Override the chart name used in resource names.
+nameOverride: ""
+# -- Override the full resource name prefix.
+fullnameOverride: ""
+
+image:
+  registry: ghcr.io
+  repository: openartifact/openartifact
+  # -- Image tag; defaults to the chart appVersion.
+  tag: ""
+  # -- Image digest (sha256:...); takes precedence over the tag when set.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# -- Number of replicas. More than one replica requires object storage
+# (storage.type != filesystem) or a ReadWriteMany volume.
+replicaCount: 1
+revisionHistoryLimit: 5
+
+# -- Deployment strategy. Empty = Recreate for filesystem storage on a
+# ReadWriteOnce volume (the volume cannot be attached twice), RollingUpdate otherwise.
+updateStrategy: {}
+
+# -- Public base URL (BASE_URL), e.g. https://artifacts.example.com.
+# Required for OIDC/SAML callbacks and correct download links behind a proxy.
+baseUrl: ""
+
+config:
+  logLevel: info  # debug | info | warn | error
+  logFormat: json  # json | text
+  allowAnonymousRead: false
+  # -- Accept the legacy API_KEY for write endpoints.
+  legacyApiKeyEnabled: true
+  sessionDurationHours: 24
+  # -- Allowed CORS origins.
+  corsOrigins: []
+  # -- CIDRs of reverse proxies whose X-Forwarded-For is trusted (usually the pod CIDR of your ingress controller).
+  trustedProxies: []
+  # -- Allowed client CIDRs (empty = allow all).
+  ipAllowlist: []
+  # -- Requests per second per client IP (0 = disabled).
+  rateLimitRps: 0
+  # -- Apply schema migrations at startup (guarded by a Postgres advisory lock, safe with several replicas).
+  migrateOnStart: true
+  shutdownTimeout: 30
+
+# -- Extra plain environment variables (name: value), e.g. AI_ENABLED: "true".
+# Put sensitive values in secrets.extra or secrets.existingSecret instead.
+env: {}
+# -- Extra environment variables in Kubernetes list form (supports valueFrom).
+extraEnv: []
+# -- Extra envFrom sources.
+extraEnvFrom: []
+
+secrets:
+  # -- Use an existing Secret instead of the chart-managed one. It is loaded with envFrom,
+  # so keys are environment variable names. It MUST contain AUTH_HMAC_KEY and
+  # OPENARTIFACT_SECRET_KEY, and METRICS_AUTH_TOKEN when metrics.enabled is true.
+  existingSecret: ""
+  # -- AUTH_HMAC_KEY for OIDC/SAML login state. Generated (and kept across upgrades) when empty.
+  hmacKey: ""
+  # -- OPENARTIFACT_SECRET_KEY (>= 16 bytes) encrypting stored credentials at rest.
+  # Generated (and kept across upgrades) when empty. Losing it makes stored secrets unreadable.
+  encryptionKey: ""
+  # -- Legacy write API key (API_KEY). Not set when empty.
+  apiKey: ""
+  # -- Additional sensitive environment variables (name: value), e.g. AI_API_KEY,
+  # OPENARTIFACT_SAML_SP_CERT, OPENARTIFACT_SAML_SP_KEY.
+  extra: {}
+  # -- Keep the chart-managed Secret on `helm uninstall` so the encryption key survives.
+  keepOnUninstall: true
+
+database:
+  # -- DB_SSLMODE: disable | require | verify-ca | verify-full.
+  sslMode: require
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetimeMinutes: 30
+  # -- Connection settings for an external PostgreSQL (ignored when cnpg.enabled).
+  external:
+    host: ""
+    port: 5432
+    name: artifact_repo
+    user: openartifact
+    # -- Password stored in the chart-managed Secret. Prefer existingSecret.
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: password
+  # -- Block startup until the database port accepts TCP connections.
+  waitForDatabase: true
+
+# -- Provision PostgreSQL with a CloudNativePG Cluster. Requires the CloudNativePG
+# operator (https://cloudnative-pg.io) to be installed in the cluster.
+cnpg:
+  enabled: false
+  instances: 1
+  # -- PostgreSQL image; empty uses the operator default.
+  imageName: ""
+  database: openartifact
+  owner: openartifact
+  storage:
+    size: 8Gi
+    storageClass: ""
+  resources: {}
+  # -- Create a PodMonitor for the database (requires the Prometheus Operator).
+  enablePodMonitor: false
+  # -- Extra fields merged into the Cluster spec (backup, affinity, postgresql parameters, ...).
+  extraSpec: {}
+
+storage:
+  # -- Blob backend: filesystem | s3 | garage | seaweedfs | gcs | azure | oci.
+  type: filesystem
+  # -- Filesystem path (filesystem backend).
+  path: /var/lib/artifacts
+  # -- Bucket (s3, garage, seaweedfs).
+  bucket: ""
+  region: ""
+  # -- Endpoint override (S3-compatible stores, oci registry).
+  endpoint: ""
+  forcePathStyle: false
+  # -- Presigned URL TTL, e.g. 5m (clamped to [1m, 1h]).
+  presignTtl: ""
+  gcs:
+    bucket: ""
+  azure:
+    accountName: ""
+    containerName: ""
+  oci:
+    insecure: false
+  credentials:
+    # -- Existing Secret loaded with envFrom; keys are environment variable names
+    # (STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENARTIFACT_GCS_HMAC_KEY,
+    # OPENARTIFACT_GCS_HMAC_SECRET, OPENARTIFACT_AZURE_ACCOUNT_KEY,
+    # STORAGE_OCI_USERNAME, STORAGE_OCI_PASSWORD).
+    existingSecret: ""
+    # -- S3 access key; leave empty to use the AWS credential chain (e.g. IRSA / Pod Identity).
+    accessKey: ""
+    secretKey: ""
+    gcsHmacKey: ""
+    gcsHmacSecret: ""
+    azureAccountKey: ""
+    ociUsername: ""
+    ociPassword: ""
+
+persistence:
+  # -- Persistent volume for filesystem blob storage. Ignored for object storage backends.
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 50Gi
+  annotations: {}
+
+backups:
+  # -- OPENARTIFACT_BACKUP_DIR.
+  path: /var/lib/openartifact/backups
+  persistence:
+    # -- Persist backups on a dedicated volume; an emptyDir is used otherwise.
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi
+    annotations: {}
+
+gpg:
+  # -- Enable GPG signing of repository metadata (Debian, RPM).
+  enabled: false
+  # -- Secret holding the armored private key under `private.key` and, optionally,
+  # the passphrase under `passphrase`.
+  existingSecret: ""
+
+metrics:
+  # -- Expose /metrics, protected by METRICS_AUTH_TOKEN (generated when empty).
+  enabled: false
+  authToken: ""
+  serviceMonitor:
+    # -- Create a ServiceMonitor (requires the Prometheus Operator).
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  # -- Large artifact uploads usually need a raised body size limit, e.g.
+  # nginx.ingress.kubernetes.io/proxy-body-size: "0".
+  annotations: {}
+  hosts:
+    - host: artifacts.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# -- Gateway API HTTPRoute (gateway.networking.k8s.io/v1).
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs: []
+  #  - name: gateway
+  #    namespace: gateway-system
+  #    sectionName: https
+  hostnames: []
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 5
+  failureThreshold: 60
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 20
+  timeoutSeconds: 3
+  failureThreshold: 3
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+terminationGracePeriodSeconds: 45
+
+autoscaling:
+  # -- Requires object storage or a ReadWriteMany volume.
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: ""
+
+podDisruptionBudget:
+  # -- Created only when more than one replica can run.
+  enabled: true
+  maxUnavailable: 1
+
+networkPolicy:
+  # -- Restrict ingress to the HTTP port. Egress is not restricted (database,
+  # object storage, upstream proxies and webhooks need it).
+  enabled: false
+  # -- Allowed peers; empty allows any source on the HTTP port.
+  from: []
+
+nodeSelector: {}
+tolerations: []
+# -- Pod affinity. Empty = prefer spreading replicas across nodes (soft pod anti-affinity).
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+
+extraVolumes: []
+extraVolumeMounts: []
+extraInitContainers: []

@@ -1,0 +1,31 @@
+{{- /*
+SPDX-FileCopyrightText: The OpenArtifact Authors
+SPDX-License-Identifier: AGPL-3.0-or-later
+*/ -}}
+{{- if .Values.cnpg.enabled }}
+{{- $spec := dict
+  "instances" .Values.cnpg.instances
+  "bootstrap" (dict "initdb" (dict "database" .Values.cnpg.database "owner" .Values.cnpg.owner))
+  "storage" (dict "size" .Values.cnpg.storage.size)
+}}
+{{- with .Values.cnpg.imageName }}
+{{- $_ := set $spec "imageName" . }}
+{{- end }}
+{{- with .Values.cnpg.storage.storageClass }}
+{{- $_ := set $spec.storage "storageClass" . }}
+{{- end }}
+{{- with .Values.cnpg.resources }}
+{{- $_ := set $spec "resources" . }}
+{{- end }}
+{{- if .Values.cnpg.enablePodMonitor }}
+{{- $_ := set $spec "monitoring" (dict "enablePodMonitor" true) }}
+{{- end }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "openartifact.cnpgClusterName" . }}
+  labels:
+    {{- include "openartifact.labels" . | nindent 4 }}
+spec:
+  {{- mergeOverwrite $spec .Values.cnpg.extraSpec | toYaml | nindent 2 }}
+{{- end }}

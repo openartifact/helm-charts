@@ -1,0 +1,34 @@
+{{- /*
+SPDX-FileCopyrightText: The OpenArtifact Authors
+SPDX-License-Identifier: AGPL-3.0-or-later
+*/ -}}
+{{- $claims := list }}
+{{- if and (include "openartifact.filesystemStorage" .) .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+{{- $claims = append $claims (dict "suffix" "data" "p" .Values.persistence) }}
+{{- end }}
+{{- if and .Values.backups.persistence.enabled (not .Values.backups.persistence.existingClaim) }}
+{{- $claims = append $claims (dict "suffix" "backups" "p" .Values.backups.persistence) }}
+{{- end }}
+{{- range $claims }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "openartifact.fullname" $ }}-{{ .suffix }}
+  labels:
+    {{- include "openartifact.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .p.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .p.accessModes | nindent 4 }}
+  {{- with .p.storageClass }}
+  storageClassName: {{ if eq . "-" }}""{{ else }}{{ . }}{{ end }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .p.size }}
+{{- end }}
