@@ -5,11 +5,11 @@
 apiVersion: v2
 name: openartifact
 description: >-
-  Enterprise-grade, free-as-in-freedom artifact repository manager: Maven, npm,
-  PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan
-  and more.
+  Self-hosted artifact repository for 16 package formats: Maven, npm, PyPI,
+  Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
+  sbt and raw.
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "0.3.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
@@ -30,8 +30,11 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
-    - kind: changed
-      description: Default image OpenArtifact 0.3.0 (packages listed and downloadable for every format, anonymous read on public repositories, Docker login fix, MCP tools).
+    - kind: added
+      description: Chart packages are signed (Helm provenance); verify with helm install --verify.
+  artifacthub.io/signKey: |
+    fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+    url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
       image: ghcr.io/openartifact/openartifact:0.3.0

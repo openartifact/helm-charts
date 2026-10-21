@@ -29,6 +29,26 @@ helm install openartifact openartifact/openartifact
 
 See the [chart README](charts/openartifact/README.md) for configuration.
 
+### Verifying charts
+
+From 0.1.2, every release is signed twice:
+
+- **Helm provenance** (`.prov`, GPG key `2CB2 1818 4F57 3BAA FC53 2E84 D4DE 9B5D 6FDD 2ACD`,
+  [`pgp_keys.asc`](https://openartifact.github.io/helm-charts/pgp_keys.asc)):
+
+  ```sh
+  curl -fsSL https://openartifact.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > openartifact-charts.gpg
+  helm install openartifact openartifact/openartifact --verify --keyring openartifact-charts.gpg
+  ```
+
+- **cosign keyless** on the OCI artifact:
+
+  ```sh
+  cosign verify ghcr.io/openartifact/charts/openartifact:0.1.2 \
+    --certificate-identity-regexp '^https://github.com/openartifact/helm-charts/' \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com
+  ```
+
 ## Development
 
 ```sh

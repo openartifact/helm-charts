@@ -48,6 +48,22 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
+      # Helm provenance (.prov) signatures, verified by `helm install --verify`
+      # and shown as "Signed" on Artifact Hub. Public key:
+      # https://openartifact.github.io/helm-charts/pgp_keys.asc
+      - name: Prepare signing keyring
+        env:
+          GPG_KEYRING_BASE64: ${{ secrets.GPG_KEYRING_BASE64 }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          dir="$RUNNER_TEMP/gpg"
+          install -d -m 700 "$dir"
+          base64 -d <<<"$GPG_KEYRING_BASE64" > "$dir/secring.gpg"
+          printf '%s' "$GPG_PASSPHRASE" > "$dir/passphrase"
+          chmod 600 "$dir/secring.gpg" "$dir/passphrase"
+          echo "CR_KEYRING=$dir/secring.gpg" >> "$GITHUB_ENV"
+          echo "CR_PASSPHRASE_FILE=$dir/passphrase" >> "$GITHUB_ENV"
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f # v1.7.0
         with:
@@ -56,6 +72,12 @@ jobs:
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CR_GENERATE_RELEASE_NOTES: true
+          CR_SIGN: true
+          CR_KEY: OpenArtifact Charts
+
+      - name: Remove signing keyring
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/gpg"
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
