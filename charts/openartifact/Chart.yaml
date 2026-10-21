@@ -9,11 +9,11 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.1.2
-appVersion: "0.3.0"
+version: 0.1.3
+appVersion: "0.4.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
-icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/logo.png
+icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
 sources:
   - https://github.com/openartifact/openartifact
   - https://github.com/openartifact/helm-charts
@@ -30,14 +30,16 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
-    - kind: added
-      description: Chart packages are signed (Helm provenance); verify with helm install --verify.
+    - kind: changed
+      description: Default image OpenArtifact 0.4.0 (proxy and group repositories, Nexus/Artifactory importer, performance work, signed images).
+    - kind: fixed
+      description: Chart icon URL.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.3.0
+      image: ghcr.io/openartifact/openartifact:0.4.0
       platforms:
         - linux/amd64
         - linux/arm64
