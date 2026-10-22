@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.2.0
-appVersion: "0.5.0"
+version: 0.2.1
+appVersion: "0.5.1"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -30,18 +30,14 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
-    - kind: security
-      description: Default image OpenArtifact 0.5.0 (Go module cross-repository leak repair, blob digest verification, shell-less hardened image).
-    - kind: changed
-      description: The wait-for-database init container is removed; the server waits itself (database.connectTimeout). helm test uses curlimages/curl.
-    - kind: added
-      description: database.connectTimeout.
+    - kind: fixed
+      description: Default image OpenArtifact 0.5.1 (replicas starting together no longer deadlock in the migrator).
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.5.0
+      image: ghcr.io/openartifact/openartifact:0.5.1
       platforms:
         - linux/amd64
         - linux/arm64
