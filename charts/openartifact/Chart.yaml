@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.2.1
-appVersion: "0.5.1"
+version: 0.3.0
+appVersion: "0.6.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -30,14 +30,16 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
-    - kind: fixed
-      description: Default image OpenArtifact 0.5.1 (replicas starting together no longer deadlock in the migrator).
+    - kind: changed
+      description: Default image OpenArtifact 0.6.0. Upgrading from 0.5.x needs a Recreate rollout (migration 025 renames tables) and the pg_trgm extension.
+    - kind: changed
+      description: config.legacyApiKeyEnabled defaults to false, matching the server default since 0.6.0.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.5.1
+      image: ghcr.io/openartifact/openartifact:0.6.0
       platforms:
         - linux/amd64
         - linux/arm64
