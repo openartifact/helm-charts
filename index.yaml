@@ -4,6 +4,52 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: security
+          description: Default image OpenArtifact 0.5.0 (Go module cross-repository leak repair, blob digest verification, shell-less hardened image).
+        - kind: changed
+          description: The wait-for-database init container is removed; the server waits itself (database.connectTimeout). helm test uses curlimages/curl.
+        - kind: added
+          description: database.connectTimeout.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.5.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.5.0
+    created: "2026-10-22T12:14:11.422926119Z"
+    description: 'Self-hosted artifact repository for 16 package formats: Maven, npm,
+      PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan,
+      Ivy, sbt and raw.'
+    digest: 8cbde0a76177810f1d570319e8ab3b3efe7f893010f202aef5dcad23af4f4fda
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.2.0/openartifact-0.2.0.tgz
+    version: 0.2.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: security
           description: Default image OpenArtifact 0.4.1 (SSRF check in AI client, cargo publish size caps, SSO open redirect and cookie flags, nosniff on group content).
       artifacthub.io/images: |
         - name: openartifact
@@ -207,4 +253,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-21T22:42:28.254724315Z"
+generated: "2026-10-22T12:14:11.422946344Z"
