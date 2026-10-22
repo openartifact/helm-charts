@@ -44,6 +44,20 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.3.0 (OpenArtifact 0.6.0)
+
+- Old and new replicas must not run side by side: migration `025` renames
+  `organizations` to `projects`. With more than one replica, or object storage (which
+  defaults to `RollingUpdate`), set `updateStrategy: {type: Recreate}` for this upgrade
+  or scale to 0 first.
+- Migration `030` creates the `pg_trgm` extension. The bundled CloudNativePG cluster
+  allows it (the app user owns the database); on external PostgreSQL the user must
+  own the database or the extension must exist already.
+- `config.legacyApiKeyEnabled` now defaults to `false`; set it to `true` if you still use
+  `secrets.apiKey`.
+- See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#060).
+
 ## Upgrading to 0.2.0 (OpenArtifact 0.5.0)
 
 - The image no longer has a shell: the `wait-for-database` init container is gone (the

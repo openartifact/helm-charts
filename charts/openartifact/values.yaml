@@ -35,8 +35,8 @@ config:
   logLevel: info  # debug | info | warn | error
   logFormat: json  # json | text
   allowAnonymousRead: false
-  # -- Accept the legacy API_KEY for write endpoints.
-  legacyApiKeyEnabled: true
+  # -- Accept the legacy API_KEY (secrets.apiKey) for write endpoints.
+  legacyApiKeyEnabled: false
   sessionDurationHours: 24
   # -- Allowed CORS origins.
   corsOrigins: []
