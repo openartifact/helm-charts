@@ -18,13 +18,12 @@ spec:
     {{- toYaml .Values.podSecurityContext | nindent 4 }}
   containers:
     - name: ready
-      image: {{ include "openartifact.image" . }}
-      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      # The OpenArtifact image has no shell or HTTP client.
+      image: docker.io/curlimages/curl:8.23.0@sha256:11e64e28c5f58c8d93ee95fcf22ac055f48b0bc440e0ce7d8013bbb5ad6aa8ac
+      imagePullPolicy: IfNotPresent
       command:
-        - wget
-        - -q
-        - -O
-        - "-"
+        - curl
+        - -fsS
         - http://{{ include "openartifact.fullname" . }}:{{ .Values.service.port }}/ready
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}

@@ -40,7 +40,18 @@ Pick one:
   replicas and PostgreSQL parameters go into `cnpg.instances` / `cnpg.extraSpec`.
 
 Schema migrations run at startup under a Postgres advisory lock
-(`config.migrateOnStart`), so several replicas can start concurrently.
+(`config.migrateOnStart`), so several replicas can start concurrently. The server
+waits up to `database.connectTimeout` (default `60s`) for the database at startup;
+`database.waitForDatabase=false` makes it fail at once.
+
+## Upgrading to 0.2.0 (OpenArtifact 0.5.0)
+
+- The image no longer has a shell: the `wait-for-database` init container is gone (the
+  server waits itself) and `helm test` uses a pinned `curlimages/curl` image.
+- Old and new replicas must not run side by side (migrations `018`, `019`, `022`).
+  With more than one replica set `updateStrategy: {type: Recreate}` for this upgrade,
+  or scale to 0 first. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#050).
 
 ## Blob storage
 
