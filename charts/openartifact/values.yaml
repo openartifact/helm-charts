@@ -92,8 +92,11 @@ database:
     password: ""
     existingSecret: ""
     existingSecretPasswordKey: password
-  # -- Block startup until the database port accepts TCP connections.
+  # -- Retry the initial database connection at startup instead of failing
+  # (DB_CONNECT_TIMEOUT = connectTimeout). false = fail at once.
   waitForDatabase: true
+  # -- How long the server waits for the database at startup (Go duration).
+  connectTimeout: 60s
 
 # -- Provision PostgreSQL with a CloudNativePG Cluster. Requires the CloudNativePG
 # operator (https://cloudnative-pg.io) to be installed in the cluster.

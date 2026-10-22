@@ -101,7 +101,8 @@
             "existingSecretPasswordKey": { "type": "string" }
           }
         },
-        "waitForDatabase": { "type": "boolean" }
+        "waitForDatabase": { "type": "boolean" },
+        "connectTimeout": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$" }
       }
     },
     "cnpg": {
