@@ -44,6 +44,14 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.5.0 (OpenArtifact 0.8.0)
+
+- Migrations `054`–`065` apply at startup; no `Recreate` needed.
+- New server settings (`MCP_*`, `ATTESTATION_KEY_PATH`, Dependency-Track, SSO provider
+  options) have no chart values; set them through `extraEnv` or the admin API.
+- See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#080).
+
 ## Upgrading to 0.4.0 (OpenArtifact 0.7.0)
 
 - Migrations `041`, `051`, `052` and `053` are additive; a rolling upgrade from 0.6.0 is
