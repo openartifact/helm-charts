@@ -15,6 +15,9 @@ spec:
       {{- include "openartifact.selectorLabels" . | nindent 6 }}
   policyTypes:
     - Ingress
+    {{- if .Values.networkPolicy.egress.enabled }}
+    - Egress
+    {{- end }}
   ingress:
     - ports:
         - port: http
@@ -23,4 +26,57 @@ spec:
       from:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+  {{- with .Values.networkPolicy.egress }}
+  {{- if .enabled }}
+  egress:
+    {{- if .dns }}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    {{- end }}
+    {{- if $.Values.cnpg.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ include "openartifact.cnpgClusterName" $ }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- end }}
+    {{- if $.Values.telemetry.otlp.enabled }}
+    {{- $ep := $.Values.telemetry.otlp.endpoint }}
+    {{- $port := ternary 4318 4317 (eq $.Values.telemetry.otlp.protocol "http") }}
+    {{- $epPort := regexFind ":[0-9]+$" (trimSuffix "/" $ep) | trimPrefix ":" }}
+    {{- if $epPort }}{{ $port = int $epPort }}{{ end }}
+    {{- if .otlp.port }}{{ $port = int .otlp.port }}{{ end }}
+    - ports:
+        - port: {{ int $port }}
+          protocol: TCP
+      {{- with .otlp.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- if not $.Values.scanners.offline }}
+    {{- with .scanners }}
+    - ports:
+        {{- range .ports }}
+        - port: {{ . }}
+          protocol: TCP
+        {{- end }}
+      {{- with .to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- with .extra }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
 {{- end }}

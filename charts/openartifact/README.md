@@ -44,6 +44,22 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.4.0 (OpenArtifact 0.7.0)
+
+- Migrations `041`, `051`, `052` and `053` are additive; a rolling upgrade from 0.6.0 is
+  fine, no `Recreate` needed.
+- The `scanners`, `telemetry.otlp`, `blobDeletion`, `tiering`, `dockerUploads` and `tmp`
+  values are new. Unset values pass nothing, so the server defaults apply and telemetry
+  and runtime scanner install stay off.
+- `trivy` / `grype` scans now use a background-downloaded database in the scanner cache
+  (several GB, first download after start). The chart mounts that cache as an `emptyDir`;
+  see [Vulnerability scanners](#vulnerability-scanners). Scanner processes no longer inherit
+  the server's environment, only `PATH`, `HOME`, proxy/CA and `TRIVY_*` / `GRYPE_*` variables.
+- Deleted blob bytes are removed after `blobDeletion.grace` (server default `24h`), so
+  storage usage falls a day after a delete.
+- See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#070).
+
 ## Upgrading to 0.3.0 (OpenArtifact 0.6.0)
 
 - Old and new replicas must not run side by side: migration `025` renames
@@ -87,6 +103,59 @@ pod can mount: an object storage backend, or `persistence.accessModes: [ReadWrit
 The chart refuses to render otherwise. With a single `ReadWriteOnce` volume the
 Deployment uses the `Recreate` strategy, so upgrades have a short downtime.
 
+## Vulnerability scanners
+
+The default `osv` scanner needs nothing. For `trivy` / `grype` either use an image built
+with the `SCANNERS` build argument, or set `scanners.trivy.install=auto` /
+`scanners.grype.install=auto`: the server then downloads the release it pins (versions are
+not set by the chart) from `github.com` (or `scanners.downloadBaseUrl`, an https mirror
+serving GitHub's release paths), verifies its checksum and runs it from
+`<scanners.cache.path>/bin`.
+
+| Value | Meaning |
+|---|---|
+| `scanners.cache.path` / `.sizeLimit` / `.persistence.*` | Cache of databases and installed binaries. `emptyDir` by default (re-downloaded after a restart); a PVC avoids that. Must be writable by uid 10001 (`fsGroup` already is) and not `noexec`. |
+| `scanners.offline` | Never download databases; fill the cache yourself. |
+| `scanners.updateInterval` | Database refresh, `0` or `>= 1h` (server default `6h`). |
+| `scanners.trivy.dbRepository`, `.javaDbRepository`, `scanners.grype.dbUrl` | Database mirrors for air-gapped or proxied clusters. |
+| `scanners.trivy.path`, `scanners.grype.path` | Use a binary you provide (e.g. via `extraInitContainers` + `extraVolumes`). |
+
+With several replicas each pod downloads its own copy unless the cache is a shared
+`ReadWriteMany` volume. Egress needed: `ghcr.io` and `mirror.gcr.io` (Trivy databases),
+`grype.anchore.io` (Grype), and with `install=auto` `github.com` plus
+`release-assets.githubusercontent.com`.
+
+## OpenTelemetry
+
+`telemetry.otlp.enabled=true` exports traces over OTLP (`endpoint`, `protocol`
+`grpc|http`, `insecure`, `serviceName`, `sampleRatio`); `telemetry.otlp.metrics=true`
+also pushes the Prometheus registry. Collector credentials never go in values: put
+`OTEL_EXPORTER_OTLP_HEADERS` (`k=v,k2=v2`, percent-encoded values) in a Secret and set
+`telemetry.otlp.headersExistingSecret` (and `headersSecretKey` if the key differs). Any other
+`OTEL_*` variable goes through `env` / `extraEnv`. `/metrics` is unaffected.
+
+## Retention, tiering and scratch space
+
+- `blobDeletion.*` (grace, sweep interval, batch), `tiering.*` (mover switch, interval,
+  batch, concurrency, bandwidth cap, read-back verification) and `backups.leaseTtl` map to
+  the matching `OPENARTIFACT_*` variables; leave them empty to keep the server defaults.
+  Tiers and policies themselves are managed in the admin UI/API. While the mover is on
+  (the server default), `database.maxOpenConns` must be 0 or at least 4; the chart refuses
+  smaller values unless `tiering.enabled=false`.
+- The root filesystem is read-only; `/tmp` is an `emptyDir` (`tmp.sizeLimit`, `tmp.medium`)
+  where uploads and proxy downloads are spooled. Docker/OCI blob uploads are staged under
+  `/tmp/openartifact/docker-uploads` by default; set `dockerUploads.dir` to give them a
+  dedicated `emptyDir` (`dockerUploads.sizeLimit`) or PVC (`dockerUploads.persistence.*`),
+  and `dockerUploads.ttl` for the idle-session lifetime.
+- `config.projectsSelfCreate` lets any authenticated user create projects.
+
+## Web UI as an installable app (PWA)
+
+Serve OpenArtifact over HTTPS (or `localhost`) so browsers offer to install it. Your
+ingress must pass `/sw.js` and `/manifest.webmanifest` through with their
+`Cache-Control: no-cache` header intact (no response caching or header overrides on them).
+No chart values are needed.
+
 ## Secrets
 
 The chart-managed Secret holds `AUTH_HMAC_KEY` (OIDC/SAML state) and
@@ -126,6 +195,13 @@ kubectl create secret generic openartifact \
 - `gpg.enabled` mounts the signing key from `gpg.existingSecret` (`private.key`,
   optional `passphrase`).
 - `networkPolicy.enabled` limits ingress to the HTTP port from `networkPolicy.from`.
+  `networkPolicy.egress.enabled` also restricts egress: it then allows DNS, the
+  CloudNativePG cluster, the OTLP collector (`egress.otlp`, when telemetry is on) and scanner
+  downloads (`egress.scanners`, unless `scanners.offline`), plus `egress.extra`. Standard
+  NetworkPolicies cannot match host names, so an empty `to` means any destination on that
+  port; add the external database, object storage, upstream proxies, webhook targets and
+  SSO providers to `egress.extra`.
+- Webhook payload formats and license metadata need no chart settings.
 
 ## Probes
 

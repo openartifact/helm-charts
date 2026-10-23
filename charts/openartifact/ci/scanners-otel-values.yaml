@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Used by chart-testing (ct install) in CI; requires the CloudNativePG operator.
+# Exercises scanner runtime install, OTLP telemetry, tiering/retention knobs,
+# a dedicated Docker upload volume and the egress NetworkPolicy.
+baseUrl: http://openartifact.local
+cnpg:
+  enabled: true
+  storage:
+    size: 1Gi
+persistence:
+  size: 1Gi
+config:
+  projectsSelfCreate: true
+tmp:
+  sizeLimit: 1Gi
+dockerUploads:
+  dir: /var/lib/openartifact/docker-uploads
+  ttl: 12h
+  sizeLimit: 1Gi
+scanners:
+  updateInterval: 12h
+  cache:
+    sizeLimit: 8Gi
+  trivy:
+    install: auto
+  grype:
+    install: auto
+telemetry:
+  otlp:
+    enabled: true
+    endpoint: http://otel-collector.observability.svc:4318
+    protocol: http
+    sampleRatio: 0.1
+    metrics: true
+blobDeletion:
+  grace: 1h
+  sweepInterval: 2m
+  sweepBatch: 100
+tiering:
+  interval: 10m
+  batch: 100
+  concurrency: 1
+  maxBytesPerSecond: 33554432
+backups:
+  leaseTtl: 10m
+networkPolicy:
+  enabled: true
+  egress:
+    enabled: true
+    extra:
+      - ports:
+          - port: 443
+            protocol: TCP

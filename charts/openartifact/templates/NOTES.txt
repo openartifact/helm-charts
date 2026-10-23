@@ -28,3 +28,24 @@ stored credentials. Back it up; it is kept on `helm uninstall`.
 
 PostgreSQL is provided by the CloudNativePG Cluster {{ include "openartifact.cnpgClusterName" . }}.
 {{- end }}
+
+{{- if or (eq .Values.scanners.trivy.install "auto") (eq .Values.scanners.grype.install "auto") }}
+
+Scanners: the server downloads the pinned Trivy/Grype release into {{ .Values.scanners.cache.path }}{{ if not .Values.scanners.cache.persistence.enabled }}
+(an emptyDir: it is downloaded again after every pod restart; set scanners.cache.persistence.enabled=true to keep it){{ end }}.
+Scan databases (several GB) are fetched in the background; check
+GET /api/v1/repositories/<repo>/vuln/scanners for readiness.
+{{- if and .Values.networkPolicy.enabled .Values.networkPolicy.egress.enabled }}
+Egress is restricted: allow github.com / release-assets.githubusercontent.com (or your scanners.downloadBaseUrl)
+for the binaries and ghcr.io, mirror.gcr.io, grype.anchore.io for databases, e.g. through networkPolicy.egress.scanners.to.
+{{- end }}
+{{- end }}
+{{- if .Values.telemetry.otlp.enabled }}
+
+OpenTelemetry tracing is on{{ with .Values.telemetry.otlp.endpoint }}, exporting to {{ . }}{{ end }}.
+{{- end }}
+{{- if and .Values.ingress.enabled }}
+
+The web UI is an installable app (PWA): serve it over HTTPS and let /sw.js and
+/manifest.webmanifest through your ingress without long-lived caching.
+{{- end }}
