@@ -59,7 +59,8 @@
         "ipAllowlist": { "type": "array", "items": { "type": "string" } },
         "rateLimitRps": { "type": "integer", "minimum": 0 },
         "migrateOnStart": { "type": "boolean" },
-        "shutdownTimeout": { "type": "integer", "minimum": 0 }
+        "shutdownTimeout": { "type": "integer", "minimum": 0 },
+        "projectsSelfCreate": { "type": "boolean" }
       }
     },
     "env": { "$ref": "#/definitions/stringMap" },
@@ -178,6 +179,7 @@
       "additionalProperties": false,
       "properties": {
         "path": { "type": "string", "pattern": "^/" },
+        "leaseTtl": {"type": "string", "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"},
         "persistence": { "$ref": "#/definitions/volume" }
       }
     },
@@ -301,7 +303,289 @@
       "additionalProperties": false,
       "properties": {
         "enabled": { "type": "boolean" },
-        "from": { "type": "array" }
+        "from": { "type": "array" },
+      "egress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "dns": {
+            "type": "boolean"
+          },
+          "otlp": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "to": {
+                "type": "array"
+              },
+              "port": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 65535
+              }
+            }
+          },
+          "scanners": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "to": {
+                "type": "array"
+              },
+              "ports": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                }
+              }
+            }
+          },
+          "extra": {
+            "type": "array"
+          }
+        }
+      }
+      }
+    },
+    "dockerUploads": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "type": "string",
+          "pattern": "^(|/.+)$"
+        },
+        "ttl": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        },
+        "sizeLimit": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m)?)$"
+        },
+        "persistence": {
+          "$ref": "#/definitions/volume"
+        }
+      }
+    },
+    "tmp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sizeLimit": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m)?)$"
+        },
+        "medium": {
+          "enum": [
+            "",
+            "Memory"
+          ]
+        }
+      }
+    },
+    "blobDeletion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "grace": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        },
+        "sweepInterval": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        },
+        "sweepBatch": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      }
+    },
+    "tiering": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "interval": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        },
+        "batch": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "concurrency": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "maxBytesPerSecond": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "verifyReadback": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "accessFlushInterval": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        },
+        "refreshInterval": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        }
+      }
+    },
+    "scanners": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/.+"
+            },
+            "sizeLimit": {
+              "type": "string",
+              "pattern": "^(|[0-9]+(\\.[0-9]+)?(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m)?)$"
+            },
+            "persistence": {
+              "$ref": "#/definitions/volume"
+            }
+          }
+        },
+        "offline": {
+          "type": "boolean"
+        },
+        "updateInterval": {
+          "type": "string",
+          "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$"
+        },
+        "downloadBaseUrl": {
+          "type": "string",
+          "pattern": "^(|https://[^/@?#]+[^@?#]*)$"
+        },
+        "trivy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "install": {
+              "enum": [
+                "none",
+                "auto"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "dbRepository": {
+              "type": "string"
+            },
+            "javaDbRepository": {
+              "type": "string"
+            }
+          }
+        },
+        "grype": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "install": {
+              "enum": [
+                "none",
+                "auto"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "dbUrl": {
+              "type": "string",
+              "pattern": "^(|https?://.+)$"
+            }
+          }
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "otlp": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "endpoint": {
+              "type": "string"
+            },
+            "protocol": {
+              "enum": [
+                "",
+                "grpc",
+                "http",
+                "http/protobuf"
+              ]
+            },
+            "insecure": {
+              "type": "boolean"
+            },
+            "serviceName": {
+              "type": "string"
+            },
+            "sampleRatio": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "metrics": {
+              "type": "boolean"
+            },
+            "headersExistingSecret": {
+              "type": "string"
+            },
+            "headersSecretKey": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
       }
     },
     "nodeSelector": { "type": "object" },

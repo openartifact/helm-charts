@@ -211,6 +211,148 @@ spec:
             {{- end }}
             - name: OPENARTIFACT_BACKUP_DIR
               value: {{ .Values.backups.path | quote }}
+            {{- with .Values.backups.leaseTtl }}
+            - name: OPENARTIFACT_BACKUP_LEASE_TTL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.config.projectsSelfCreate }}
+            - name: OPENARTIFACT_PROJECTS_SELF_CREATE
+              value: "true"
+            {{- end }}
+            {{- with .Values.dockerUploads.dir }}
+            - name: OPENARTIFACT_DOCKER_UPLOAD_DIR
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.dockerUploads.ttl }}
+            - name: OPENARTIFACT_DOCKER_UPLOAD_TTL
+              value: {{ . | quote }}
+            {{- end }}
+            # Blob deletion and storage tiering (only set values are passed; server defaults otherwise)
+            {{- with .Values.blobDeletion.grace }}
+            - name: OPENARTIFACT_BLOB_DELETION_GRACE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.blobDeletion.sweepInterval }}
+            - name: OPENARTIFACT_BLOB_DELETION_SWEEP_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if kindIs "float64" .Values.blobDeletion.sweepBatch }}
+            - name: OPENARTIFACT_BLOB_DELETION_SWEEP_BATCH
+              value: {{ .Values.blobDeletion.sweepBatch | int64 | quote }}
+            {{- end }}
+            {{- if kindIs "bool" .Values.tiering.enabled }}
+            - name: OPENARTIFACT_TIERING_ENABLED
+              value: {{ .Values.tiering.enabled | quote }}
+            {{- end }}
+            {{- with .Values.tiering.interval }}
+            - name: OPENARTIFACT_TIERING_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if kindIs "float64" .Values.tiering.batch }}
+            - name: OPENARTIFACT_TIERING_BATCH
+              value: {{ .Values.tiering.batch | int64 | quote }}
+            {{- end }}
+            {{- if kindIs "float64" .Values.tiering.concurrency }}
+            - name: OPENARTIFACT_TIERING_CONCURRENCY
+              value: {{ .Values.tiering.concurrency | int64 | quote }}
+            {{- end }}
+            {{- if kindIs "float64" .Values.tiering.maxBytesPerSecond }}
+            - name: OPENARTIFACT_TIERING_MAX_BYTES_PER_SECOND
+              value: {{ .Values.tiering.maxBytesPerSecond | int64 | quote }}
+            {{- end }}
+            {{- if kindIs "bool" .Values.tiering.verifyReadback }}
+            - name: OPENARTIFACT_TIERING_VERIFY_READBACK
+              value: {{ .Values.tiering.verifyReadback | quote }}
+            {{- end }}
+            {{- with .Values.tiering.accessFlushInterval }}
+            - name: OPENARTIFACT_TIERING_ACCESS_FLUSH_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.tiering.refreshInterval }}
+            - name: OPENARTIFACT_TIERING_REFRESH_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            # Vulnerability scanners
+            - name: OPENARTIFACT_SCANNER_CACHE_DIR
+              value: {{ .Values.scanners.cache.path | quote }}
+            {{- if .Values.scanners.offline }}
+            - name: OPENARTIFACT_SCANNER_OFFLINE
+              value: "true"
+            {{- end }}
+            {{- with .Values.scanners.updateInterval }}
+            - name: OPENARTIFACT_SCANNER_UPDATE_INTERVAL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.scanners.downloadBaseUrl }}
+            - name: OPENARTIFACT_SCANNER_DOWNLOAD_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if eq .Values.scanners.trivy.install "auto" }}
+            - name: OPENARTIFACT_TRIVY_INSTALL
+              value: auto
+            {{- end }}
+            {{- with .Values.scanners.trivy.path }}
+            - name: OPENARTIFACT_TRIVY_PATH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.scanners.trivy.dbRepository }}
+            - name: OPENARTIFACT_TRIVY_DB_REPOSITORY
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.scanners.trivy.javaDbRepository }}
+            - name: OPENARTIFACT_TRIVY_JAVA_DB_REPOSITORY
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if eq .Values.scanners.grype.install "auto" }}
+            - name: OPENARTIFACT_GRYPE_INSTALL
+              value: auto
+            {{- end }}
+            {{- with .Values.scanners.grype.path }}
+            - name: OPENARTIFACT_GRYPE_PATH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.scanners.grype.dbUrl }}
+            - name: OPENARTIFACT_GRYPE_DB_URL
+              value: {{ . | quote }}
+            {{- end }}
+            # OpenTelemetry
+            {{- with .Values.telemetry.otlp }}
+            {{- if .enabled }}
+            - name: OPENARTIFACT_OTLP_ENABLED
+              value: "true"
+            {{- with .endpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .protocol }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .insecure }}
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+            {{- end }}
+            {{- with .serviceName }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if kindIs "float64" .sampleRatio }}
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: {{ .sampleRatio | quote }}
+            {{- end }}
+            {{- if .metrics }}
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            {{- end }}
+            {{- with .headersExistingSecret }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $.Values.telemetry.otlp.headersSecretKey }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
             # GPG
             - name: GPG_ENABLED
               value: {{ .Values.gpg.enabled | quote }}
@@ -248,6 +390,12 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.dockerUploads.dir }}
+            - name: docker-uploads
+              mountPath: {{ .Values.dockerUploads.dir }}
+            {{- end }}
+            - name: scanner-cache
+              mountPath: {{ .Values.scanners.cache.path }}
             {{- if $fs }}
             - name: data
               mountPath: {{ .Values.storage.path }}
@@ -264,7 +412,42 @@ spec:
             {{- end }}
       volumes:
         - name: tmp
-          emptyDir: {}
+          emptyDir:
+            {{- with .Values.tmp.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- end }}
+            {{- with .Values.tmp.medium }}
+            medium: {{ . }}
+            {{- end }}
+            {{- if and (not .Values.tmp.sizeLimit) (not .Values.tmp.medium) }}
+            {}
+            {{- end }}
+        {{- if .Values.dockerUploads.dir }}
+        - name: docker-uploads
+          {{- if .Values.dockerUploads.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.dockerUploads.persistence.existingClaim | default (printf "%s-docker-uploads" $fullname) }}
+          {{- else }}
+          emptyDir:
+            {{- with .Values.dockerUploads.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }}
+            {}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        - name: scanner-cache
+          {{- if .Values.scanners.cache.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.scanners.cache.persistence.existingClaim | default (printf "%s-scanner-cache" $fullname) }}
+          {{- else }}
+          emptyDir:
+            {{- with .Values.scanners.cache.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }}
+            {}
+            {{- end }}
+          {{- end }}
         {{- if $fs }}
         - name: data
           {{- if .Values.persistence.enabled }}

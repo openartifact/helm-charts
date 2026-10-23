@@ -9,6 +9,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 {{- if and .Values.backups.persistence.enabled (not .Values.backups.persistence.existingClaim) }}
 {{- $claims = append $claims (dict "suffix" "backups" "p" .Values.backups.persistence) }}
 {{- end }}
+{{- if and .Values.dockerUploads.dir .Values.dockerUploads.persistence.enabled (not .Values.dockerUploads.persistence.existingClaim) }}
+{{- $claims = append $claims (dict "suffix" "docker-uploads" "p" .Values.dockerUploads.persistence) }}
+{{- end }}
+{{- if and .Values.scanners.cache.persistence.enabled (not .Values.scanners.cache.persistence.existingClaim) }}
+{{- $claims = append $claims (dict "suffix" "scanner-cache" "p" .Values.scanners.cache.persistence) }}
+{{- end }}
 {{- range $claims }}
 ---
 apiVersion: v1

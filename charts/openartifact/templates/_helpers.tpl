@@ -96,10 +96,12 @@ app.kubernetes.io/part-of: openartifact
 {{- if or (eq .Values.storage.type "filesystem") (eq .Values.storage.type "") }}true{{ end }}
 {{- end }}
 
-{{/* True when a mounted volume (blobs or backups) cannot be shared between pods. */}}
+{{/* True when a mounted volume (blobs, backups, scanner cache or docker uploads) cannot be shared between pods. */}}
 {{- define "openartifact.singleWriterVolume" -}}
 {{- if and (include "openartifact.filesystemStorage" .) .Values.persistence.enabled (not (has "ReadWriteMany" .Values.persistence.accessModes)) }}true
 {{- else if and .Values.backups.persistence.enabled (not (has "ReadWriteMany" .Values.backups.persistence.accessModes)) }}true
+{{- else if and .Values.scanners.cache.persistence.enabled (not (has "ReadWriteMany" .Values.scanners.cache.persistence.accessModes)) }}true
+{{- else if and .Values.dockerUploads.dir .Values.dockerUploads.persistence.enabled (not (has "ReadWriteMany" .Values.dockerUploads.persistence.accessModes)) }}true
 {{- end }}
 {{- end }}
 
@@ -109,13 +111,25 @@ app.kubernetes.io/part-of: openartifact
 {{- fail "filesystem storage with more than one replica needs persistence.enabled=true and a ReadWriteMany volume, or an object storage backend" }}
 {{- end }}
 {{- if and $multi (include "openartifact.singleWriterVolume" .) }}
-{{- fail "more than one replica needs ReadWriteMany in persistence.accessModes (filesystem storage) and backups.persistence.accessModes (when enabled), or an object storage backend" }}
+{{- fail "more than one replica needs ReadWriteMany in the accessModes of every enabled persistence volume (persistence, backups.persistence, scanners.cache.persistence, dockerUploads.persistence), or an object storage backend (and emptyDir for the others)" }}
 {{- end }}
 {{- if and .Values.secrets.existingSecret .Values.database.external.password (not .Values.cnpg.enabled) }}
 {{- fail "database.external.password is stored in the chart-managed Secret; with secrets.existingSecret put DB_PASSWORD there or use database.external.existingSecret" }}
 {{- end }}
 {{- if and .Values.gpg.enabled (not .Values.gpg.existingSecret) }}
 {{- fail "gpg.enabled requires gpg.existingSecret" }}
+{{- end }}
+{{- if and (kindIs "bool" .Values.tiering.enabled) .Values.tiering.enabled (gt (int .Values.database.maxOpenConns) 0) (lt (int .Values.database.maxOpenConns) 4) }}
+{{- fail "database.maxOpenConns must be 0 or at least 4 while tiering.enabled=true (the tier mover pins connections)" }}
+{{- end }}
+{{- if and (not (kindIs "bool" .Values.tiering.enabled)) (gt (int .Values.database.maxOpenConns) 0) (lt (int .Values.database.maxOpenConns) 4) }}
+{{- fail "database.maxOpenConns must be 0 or at least 4 unless tiering.enabled=false (the tier mover is on by default and pins connections)" }}
+{{- end }}
+{{- if and .Values.dockerUploads.persistence.enabled (not .Values.dockerUploads.dir) }}
+{{- fail "dockerUploads.persistence.enabled requires dockerUploads.dir" }}
+{{- end }}
+{{- if and .Values.telemetry.otlp.headersExistingSecret (not .Values.telemetry.otlp.enabled) }}
+{{- fail "telemetry.otlp.headersExistingSecret requires telemetry.otlp.enabled=true" }}
 {{- end }}
 {{- if and .Values.metrics.serviceMonitor.enabled (not .Values.metrics.enabled) }}
 {{- fail "metrics.serviceMonitor.enabled requires metrics.enabled=true" }}

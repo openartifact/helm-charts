@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.3.0
-appVersion: "0.6.0"
+version: 0.4.0
+appVersion: "0.7.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,15 +31,23 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: Default image OpenArtifact 0.6.0. Upgrading from 0.5.x needs a Recreate rollout (migration 025 renames tables) and the pg_trgm extension.
-    - kind: changed
-      description: config.legacyApiKeyEnabled defaults to false, matching the server default since 0.6.0.
+      description: Default image OpenArtifact 0.7.0 (additive migrations only; a rolling upgrade from 0.6.0 is fine).
+    - kind: added
+      description: scanners.* for the Trivy/Grype vulnerability scanners - runtime install (install=auto), offline mode, database mirrors, and a cache volume (emptyDir or PVC) at the scanner cache directory.
+    - kind: added
+      description: telemetry.otlp.* for OpenTelemetry export (endpoint, protocol, sample ratio, OTLP metrics, collector headers from an existing Secret).
+    - kind: added
+      description: blobDeletion.*, tiering.* and backups.leaseTtl tune deferred blob deletion, the storage tier mover and backup leases; unset values keep the server defaults.
+    - kind: added
+      description: dockerUploads.* (staging directory, TTL, own volume), tmp.* (scratch volume size/medium) and config.projectsSelfCreate.
+    - kind: added
+      description: networkPolicy.egress.* optionally restricts egress and allows DNS, the CloudNativePG cluster, the OTLP collector and scanner downloads.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.6.0
+      image: ghcr.io/openartifact/openartifact:0.7.0
       platforms:
         - linux/amd64
         - linux/arm64

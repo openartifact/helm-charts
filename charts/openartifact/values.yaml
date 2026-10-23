@@ -49,6 +49,135 @@ config:
   # -- Apply schema migrations at startup (guarded by a Postgres advisory lock, safe with several replicas).
   migrateOnStart: true
   shutdownTimeout: 30
+  # -- Let any authenticated user create a project and become its owner
+  # (OPENARTIFACT_PROJECTS_SELF_CREATE). false = only global admins create projects.
+  # An administrator can override it at runtime (system setting projects.self_create).
+  projectsSelfCreate: false
+
+# -- Docker/OCI blob upload staging. All keys are optional; unset keys keep the
+# server default (staging in <tmp>/openartifact/docker-uploads on the /tmp emptyDir,
+# sessions idle for 24h are removed). Set `dir` to stage uploads on a dedicated
+# volume (sizeLimit, or persistence) instead of the /tmp scratch volume.
+dockerUploads:
+  # -- OPENARTIFACT_DOCKER_UPLOAD_DIR (absolute path). Empty = server default under /tmp.
+  dir: ""
+  # -- OPENARTIFACT_DOCKER_UPLOAD_TTL: how long an idle upload session is kept, e.g. 24h.
+  ttl: ""
+  # -- Size limit of the emptyDir backing `dir` (e.g. 20Gi); ignored with persistence.enabled.
+  sizeLimit: ""
+  # -- Persistent volume backing `dir` instead of an emptyDir.
+  persistence:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi
+    annotations: {}
+
+# -- Writable scratch volume mounted at /tmp (the root filesystem is read-only).
+# Large uploads (Maven, npm, RPM, DEB, raw, restores) and proxy downloads are
+# spooled here before they reach the blob store.
+tmp:
+  # -- Size limit of the emptyDir, e.g. 10Gi. Empty = unlimited (node ephemeral storage).
+  sizeLimit: ""
+  # -- "" (node disk) or Memory (tmpfs; counts against the memory limit).
+  medium: ""
+
+# -- Deferred deletion of blob bytes (OPENARTIFACT_BLOB_DELETION_*).
+blobDeletion:
+  # -- Grace period before bytes of a deleted blob are removed (server default 24h; 0 = as soon as no backup needs them).
+  grace: ""
+  # -- Sweeper interval (server default 1m).
+  sweepInterval: ""
+  # -- Blobs removed per sweeper pass, >= 1 (server default 200).
+  sweepBatch: null
+
+# -- Storage tier mover (OPENARTIFACT_TIERING_*). Tiers and policies are managed
+# through the admin UI/API; with only the primary store these have no effect.
+# Empty/null = server default.
+tiering:
+  # -- Switch the background mover on or off (server default true). While on, database.maxOpenConns must be 0 or >= 4.
+  enabled: null
+  # -- Pause between mover passes (server default 5m).
+  interval: ""
+  # -- Blobs per pass, >= 1 (server default 200).
+  batch: null
+  # -- Concurrent moves, >= 1 (server default 2).
+  concurrency: null
+  # -- Bandwidth cap in bytes per second, 0 = unlimited (server default 67108864 = 64 MiB/s).
+  maxBytesPerSecond: null
+  # -- Re-read and verify each blob after copying it (server default true).
+  verifyReadback: null
+  # -- How often read times are flushed to the database (server default 30s).
+  accessFlushInterval: ""
+  # -- How often tiers and policies are reloaded (server default 30s).
+  refreshInterval: ""
+
+# -- Vulnerability scanners (trivy, grype); the default OSV scanner needs none of this.
+# The image does not bundle them unless built with the SCANNERS build argument, so
+# either use such an image, or set `install: auto` to let the server download the
+# pinned, checksum-verified release into the cache volume. Scan databases are
+# downloaded in the background into the cache (several GB).
+scanners:
+  cache:
+    # -- OPENARTIFACT_SCANNER_CACHE_DIR; databases and auto-installed binaries (<path>/bin) live here.
+    # The volume must be writable by uid/gid 10001 and mounted with exec.
+    path: /var/cache/openartifact/scanners
+    # -- Size limit of the emptyDir backing the cache (databases need ~5 GB with both scanners); ignored with persistence.enabled.
+    sizeLimit: ""
+    # -- Persist the cache so a restart neither re-downloads the databases nor the binaries.
+    persistence:
+      enabled: false
+      existingClaim: ""
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 10Gi
+      annotations: {}
+  # -- Never download databases; scans use only what the cache already holds (OPENARTIFACT_SCANNER_OFFLINE).
+  offline: false
+  # -- Pause between database refreshes, 0 or >= 1h (server default 6h; OPENARTIFACT_SCANNER_UPDATE_INTERVAL).
+  updateInterval: ""
+  # -- https origin serving GitHub's release paths, used by install=auto (server default https://github.com).
+  downloadBaseUrl: ""
+  trivy:
+    # -- none | auto. auto downloads the pinned release when `path` is empty and trivy is not on PATH. The version is pinned by the server, not by the chart.
+    install: none
+    # -- Binary: command name on PATH or absolute path. Empty = trivy.
+    path: ""
+    # -- OCI repository mirroring ghcr.io/aquasecurity/trivy-db. Empty = upstream.
+    dbRepository: ""
+    # -- OCI repository mirroring ghcr.io/aquasecurity/trivy-java-db. Empty = no Java database.
+    javaDbRepository: ""
+  grype:
+    # -- none | auto (see trivy.install).
+    install: none
+    path: ""
+    # -- Database listing URL of a mirror (OPENARTIFACT_GRYPE_DB_URL). Empty = upstream.
+    dbUrl: ""
+
+telemetry:
+  # -- OpenTelemetry traces (and optionally metrics) over OTLP, off by default.
+  # /metrics is unaffected.
+  otlp:
+    enabled: false
+    # -- Collector endpoint, host:port or http(s) URL (OTEL_EXPORTER_OTLP_ENDPOINT). Empty = SDK default (localhost).
+    endpoint: ""
+    # -- grpc | http (OTLP/HTTP protobuf). Empty = server default (grpc).
+    protocol: ""
+    # -- Plaintext to the collector (an http:// endpoint implies it).
+    insecure: false
+    # -- service.name resource attribute. Empty = openartifact.
+    serviceName: ""
+    # -- Fraction of new traces recorded, 0..1. null = server default (1).
+    sampleRatio: null
+    # -- Also export the Prometheus registry as OTLP metrics (OTEL_METRICS_EXPORTER=otlp).
+    metrics: false
+    # -- Existing Secret holding the collector credentials as OTEL_EXPORTER_OTLP_HEADERS
+    # (k=v,k2=v2, values percent-encoded) under `headersSecretKey`. Never put them in values.
+    headersExistingSecret: ""
+    headersSecretKey: OTEL_EXPORTER_OTLP_HEADERS
 
 # -- Extra plain environment variables (name: value), e.g. AI_ENABLED: "true".
 # Put sensitive values in secrets.extra or secrets.existingSecret instead.
@@ -164,6 +293,9 @@ persistence:
 backups:
   # -- OPENARTIFACT_BACKUP_DIR.
   path: /var/lib/openartifact/backups
+  # -- Lease of a running backup without a heartbeat, after which a crashed backup stops
+  # holding blob deletions back (OPENARTIFACT_BACKUP_LEASE_TTL, server default 5m; must be positive).
+  leaseTtl: ""
   persistence:
     # -- Persist backups on a dedicated volume; an emptyDir is used otherwise.
     enabled: false
@@ -299,6 +431,30 @@ networkPolicy:
   enabled: false
   # -- Allowed peers; empty allows any source on the HTTP port.
   from: []
+  egress:
+    # -- Also restrict egress (policyTypes Egress). Only DNS, the CloudNativePG cluster
+    # (cnpg.enabled), the rules below and `extra` are then allowed: add the external
+    # database, object storage, upstream proxies, webhook targets and OIDC/SAML
+    # providers to `extra`, or the server cannot reach them.
+    enabled: false
+    # -- Allow DNS (port 53 UDP/TCP) to any namespace.
+    dns: true
+    # -- Allow the OTLP collector when telemetry.otlp.enabled. `to` is a list of NetworkPolicy
+    # peers (namespaceSelector/podSelector/ipBlock); empty = any destination on the port.
+    otlp:
+      to: []
+      # -- Empty = 4317 (grpc) or 4318 (http), or the port of telemetry.otlp.endpoint when it has one.
+      port: null
+    # -- Allow scanner downloads (databases from ghcr.io, mirror.gcr.io, grype.anchore.io and,
+    # with install=auto, github.com / release-assets.githubusercontent.com). NetworkPolicy
+    # cannot match host names, so `to` is an IP/CIDR or pod peer (e.g. your mirror or proxy);
+    # empty = any destination on the ports. Not rendered when scanners.offline=true.
+    scanners:
+      to: []
+      ports:
+        - 443
+    # -- Extra egress rules, appended verbatim (NetworkPolicyEgressRule list).
+    extra: []
 
 nodeSelector: {}
 tolerations: []
