@@ -44,6 +44,20 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.6.0 (OpenArtifact 0.9.0)
+
+- Migrations `067`–`071` and `080` are additive; rolling upgrade, no `Recreate` needed.
+- The disaster-recovery journal is on by default: the first start backfills one small
+  sidecar blob per package row into the blob store.
+- `DELETE /api/v1/users/{id}` now deletes the account; use `PATCH {"disabled": true}` to keep it.
+- Metric `path` labels changed (OCI `/v2` is split, catch-alls keep `/*`): update dashboards.
+- New settings (`storage.replica`, `federation.*`, `recovery.*`, `docs.baseUrl`) have no
+  chart values; set them through `extraEnv`.
+- With `readOnlyRootFilesystem`, uploads above 1 MiB spool to `$TMPDIR` (the chart's `tmp`
+  volume); size it for concurrent large uploads.
+- See the
+  [upgrade notes](https://openartifact.github.io/v0.9/getting-started/upgrading.html#_0-9-0).
+
 ## Upgrading to 0.5.0 (OpenArtifact 0.8.0)
 
 - Migrations `054`–`065` apply at startup; no `Recreate` needed.

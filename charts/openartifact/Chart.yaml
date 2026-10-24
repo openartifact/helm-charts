@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.5.1
-appVersion: "0.8.1"
+version: 0.6.0
+appVersion: "0.9.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,13 +31,13 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: Default image OpenArtifact 0.8.1 (migration 066; the image ships the oa CLI for oa apply hooks).
+      description: Default image OpenArtifact 0.9.0 (migrations 067-071 and 080; DELETE of a user is now permanent; metric path labels changed, see the upgrade notes).
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.8.1
+      image: ghcr.io/openartifact/openartifact:0.9.0
       platforms:
         - linux/amd64
         - linux/arm64
