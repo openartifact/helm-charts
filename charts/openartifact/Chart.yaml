@@ -9,7 +9,7 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.7.0
+version: 0.7.1
 appVersion: "0.10.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
@@ -30,6 +30,8 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
+    - kind: changed
+      description: terminationGracePeriodSeconds now defaults to 75 so a pod stopping during a backup or scan can finish its graceful shutdown (30 s HTTP drain + 15 s background tasks + audit and telemetry flushes).
     - kind: changed
       description: Default image OpenArtifact 0.10.0 (no migrations; white-label branding, oa CI commands, audit retention; /manifest.webmanifest is now served by the server, see the upgrade notes).
   artifacthub.io/signKey: |

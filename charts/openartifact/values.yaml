@@ -410,7 +410,13 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 
-terminationGracePeriodSeconds: 45
+# -- Seconds Kubernetes waits after SIGTERM before SIGKILL. It must cover the
+# whole graceful shutdown of the server, in order: in-flight HTTP requests
+# (config.shutdownTimeout, 30) + cancelled background backups, restores and
+# scans (up to 15) + worker stop and final audit flush (up to 5) + telemetry
+# flush (up to 5) = 55, plus headroom for the workers to finish their current
+# pass. Raise it together with config.shutdownTimeout.
+terminationGracePeriodSeconds: 75
 
 autoscaling:
   # -- Requires object storage or a ReadWriteMany volume.
