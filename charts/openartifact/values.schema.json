@@ -81,6 +81,23 @@
         "keepOnUninstall": { "type": "boolean" }
       }
     },
+    "bootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "existingSecret": { "type": "string" },
+        "createSecret": { "type": "boolean" },
+        "forcePasswordChange": { "type": "boolean" },
+        "adminToken": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "ttl": { "type": "string" }
+          }
+        }
+      }
+    },
     "database": {
       "type": "object",
       "additionalProperties": false,

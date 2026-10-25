@@ -9,6 +9,21 @@ Reach it locally with:
   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openartifact.fullname" . }} 8080:{{ .Values.service.port }}
   open http://127.0.0.1:8080
 {{- end }}
+{{- if include "openartifact.bootstrapEnabled" . }}
+
+The first admin ("admin") is created on an empty database with the password from the Secret
+{{ include "openartifact.bootstrapSecretName" . }}. Read it with:
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "openartifact.bootstrapSecretName" . }} -o jsonpath='{.data.admin-password}' | base64 -d; echo
+{{- if .Values.bootstrap.adminToken.enabled }}
+and the admin API token (for `oa --token` / OA_TOKEN) with the key admin-token.
+{{- end }}
+An existing admin is never changed; to reset a password on a running instance use cmd/resetpw.
+{{- else }}
+
+No bootstrap Secret is configured: the server prints a random admin password once, valid for 24 hours:
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "openartifact.fullname" . }} | grep -A6 'OPENARTIFACT BOOTSTRAP'
+Set bootstrap.createSecret=true or bootstrap.existingSecret to choose it instead.
+{{- end }}
 {{- if not .Values.baseUrl }}
 
 WARNING: baseUrl is not set. Set it to the public URL so OIDC/SAML callbacks and
