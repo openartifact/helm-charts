@@ -114,6 +114,24 @@ app.kubernetes.io/part-of: openartifact
 {{- end }}
 {{- end }}
 
+{{/*
+TCP port the OTLP exporter dials for an endpoint. Takes a dict with endpoint and protocol.
+URL endpoint: its port, else 443 for https:// and 80 for http://. host[:port]: its port, else
+4318 for http(/protobuf) and 4317 for grpc.
+*/}}
+{{- define "openartifact.otlpPort" -}}
+{{- $ep := .endpoint | default "" }}
+{{- $port := ternary 4318 4317 (hasPrefix "http" (.protocol | default "")) }}
+{{- if regexMatch "^https?://" $ep }}
+{{- $hostPort := regexReplaceAll "^https?://([^/?#]*).*$" $ep "${1}" }}
+{{- $port = ternary 443 80 (hasPrefix "https://" $ep) }}
+{{- with regexFind ":[0-9]+$" $hostPort | trimPrefix ":" }}{{ $port = int . }}{{ end }}
+{{- else }}
+{{- with regexFind ":[0-9]+$" (trimSuffix "/" $ep) | trimPrefix ":" }}{{ $port = int . }}{{ end }}
+{{- end }}
+{{- $port }}
+{{- end }}
+
 {{- define "openartifact.validate" -}}
 {{- $multi := or .Values.autoscaling.enabled (gt (int .Values.replicaCount) 1) }}
 {{- if and $multi (include "openartifact.filesystemStorage" .) (not .Values.persistence.enabled) }}

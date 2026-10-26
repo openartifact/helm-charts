@@ -470,7 +470,8 @@ networkPolicy:
     # peers (namespaceSelector/podSelector/ipBlock); empty = any destination on the port.
     otlp:
       to: []
-      # -- Empty = 4317 (grpc) or 4318 (http), or the port of telemetry.otlp.endpoint when it has one.
+      # -- Overrides the port derived from telemetry.otlp.endpoint: its port when it has one, else
+      # 443 for https:// and 80 for http:// URLs, else 4317 (grpc) or 4318 (http).
       port: null
     # -- Allow scanner downloads (databases from ghcr.io, mirror.gcr.io, grype.anchore.io and,
     # with install=auto, github.com / release-assets.githubusercontent.com). NetworkPolicy

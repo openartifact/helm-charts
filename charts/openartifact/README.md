@@ -194,6 +194,11 @@ also pushes the Prometheus registry. Collector credentials never go in values: p
 `telemetry.otlp.headersExistingSecret` (and `headersSecretKey` if the key differs). Any other
 `OTEL_*` variable goes through `env` / `extraEnv`. `/metrics` is unaffected.
 
+With `networkPolicy.egress.enabled`, the OTLP egress rule opens the port the exporter
+dials: the port of a URL endpoint, else `443` for `https://` and `80` for `http://`; the port
+of a `host:port` endpoint, else `4317` (grpc) or `4318` (http).
+`networkPolicy.egress.otlp.port` overrides it.
+
 ## Retention, tiering and scratch space
 
 - `blobDeletion.*` (grace, sweep interval, batch), `tiering.*` (mover switch, interval,

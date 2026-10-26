@@ -48,11 +48,8 @@ spec:
           protocol: TCP
     {{- end }}
     {{- if $.Values.telemetry.otlp.enabled }}
-    {{- $ep := $.Values.telemetry.otlp.endpoint }}
-    {{- $port := ternary 4318 4317 (eq $.Values.telemetry.otlp.protocol "http") }}
-    {{- $epPort := regexFind ":[0-9]+$" (trimSuffix "/" $ep) | trimPrefix ":" }}
-    {{- if $epPort }}{{ $port = int $epPort }}{{ end }}
-    {{- if .otlp.port }}{{ $port = int .otlp.port }}{{ end }}
+    {{- $port := include "openartifact.otlpPort" $.Values.telemetry.otlp }}
+    {{- if .otlp.port }}{{ $port = .otlp.port }}{{ end }}
     - ports:
         - port: {{ int $port }}
           protocol: TCP
