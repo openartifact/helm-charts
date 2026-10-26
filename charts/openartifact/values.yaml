@@ -207,7 +207,7 @@ secrets:
 
 # First admin account. Only applied by the server to an EMPTY database (see the
 # README, "First admin"); an existing admin is never changed. Needs an OpenArtifact
-# release that supports the bootstrap settings (newer than 0.10.0): older images
+# release that supports the bootstrap settings (0.11.0 or newer): older images
 # ignore them and print a random password instead.
 bootstrap:
   # -- Existing Secret with the key `admin-password` and, when adminToken.enabled, `admin-token`.

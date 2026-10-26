@@ -44,6 +44,20 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.8.0 (OpenArtifact 0.11.0)
+
+- Migrations `081` to `085`; rolling upgrade, 0.10.0 pods keep serving while new pods migrate.
+- New `bootstrap.*` values supply the first admin password and an admin API token (see
+  "First admin"). Without them nothing changes, except that a generated, printed admin
+  password stops working for login after 24 hours (`OPENARTIFACT_BOOTSTRAP_GENERATED_PASSWORD_TTL`,
+  `0` disables the expiry); it only affects new, empty databases.
+- The web UI moved to seven areas and many URLs changed; old links redirect. The API docs
+  moved from `/swagger/` to `/api/reference` (set `OPENARTIFACT_API_DOCS_ENABLED=false` through
+  `extraEnv` to turn the page off). Federation blob resume settings have no chart values; use
+  `extraEnv` (`OPENARTIFACT_FEDERATION_*`).
+- See the
+  [upgrade notes](https://openartifact.github.io/v0.11/getting-started/upgrading.html#_0-11-0).
+
 ## Upgrading to 0.7.0 (OpenArtifact 0.10.0)
 
 - No migrations; rolling upgrade.
@@ -246,8 +260,8 @@ Notes:
 - `createSecret` relies on `lookup`, which returns nothing under `helm template`: Argo CD
   (and any tool that renders with `helm template`) would generate a new password on every
   render. With Argo CD use `bootstrap.existingSecret`.
-- This needs an OpenArtifact release that supports the bootstrap settings (newer than
-  0.10.0). Older images ignore them and print a random password instead.
+- This needs an OpenArtifact release that supports the bootstrap settings (0.11.0
+  or newer). Older images ignore them and print a random password instead.
 
 ## Exposure
 
