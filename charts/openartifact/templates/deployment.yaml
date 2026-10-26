@@ -353,6 +353,10 @@ spec:
             {{- end }}
             {{- end }}
             {{- end }}
+            {{- if .Values.pprof.enabled }}
+            - name: OPENARTIFACT_PPROF_ENABLED
+              value: "true"
+            {{- end }}
             # GPG
             - name: GPG_ENABLED
               value: {{ .Values.gpg.enabled | quote }}

@@ -295,6 +295,8 @@ Notes:
 - `metrics.enabled` protects `/metrics` with `METRICS_AUTH_TOKEN`;
   `metrics.serviceMonitor.enabled` creates a Prometheus Operator `ServiceMonitor` that
   authenticates with it.
+- `pprof.enabled` sets `OPENARTIFACT_PPROF_ENABLED=true`: Go's runtime profiler is served at
+  `/api/v1/admin/pprof/` to administrators only. Leave it off outside diagnostics.
 - `gpg.enabled` mounts the signing key from `gpg.existingSecret` (`private.key`,
   optional `passphrase`).
 - `networkPolicy.enabled` limits ingress to the HTTP port from `networkPolicy.from`.

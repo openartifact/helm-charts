@@ -179,6 +179,11 @@ telemetry:
     headersExistingSecret: ""
     headersSecretKey: OTEL_EXPORTER_OTLP_HEADERS
 
+pprof:
+  # -- Mount Go's runtime profiler at /api/v1/admin/pprof/ (OPENARTIFACT_PPROF_ENABLED).
+  # Admin only; leave it off outside diagnostics.
+  enabled: false
+
 # -- Extra plain environment variables (name: value), e.g. AI_ENABLED: "true".
 # Put sensitive values in secrets.extra or secrets.existingSecret instead.
 env: {}
