@@ -44,6 +44,20 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.8.0 (OpenArtifact 0.11.0)
+
+- Migrations `081` to `085`; rolling upgrade, 0.10.0 pods keep serving while new pods migrate.
+- New `bootstrap.*` values supply the first admin password and an admin API token (see
+  "First admin"). Without them nothing changes, except that a generated, printed admin
+  password stops working for login after 24 hours (`OPENARTIFACT_BOOTSTRAP_GENERATED_PASSWORD_TTL`,
+  `0` disables the expiry); it only affects new, empty databases.
+- The web UI moved to seven areas and many URLs changed; old links redirect. The API docs
+  moved from `/swagger/` to `/api/reference` (set `OPENARTIFACT_API_DOCS_ENABLED=false` through
+  `extraEnv` to turn the page off). Federation blob resume settings have no chart values; use
+  `extraEnv` (`OPENARTIFACT_FEDERATION_*`).
+- See the
+  [upgrade notes](https://openartifact.github.io/v0.11/getting-started/upgrading.html#_0-11-0).
+
 ## Upgrading to 0.7.0 (OpenArtifact 0.10.0)
 
 - No migrations; rolling upgrade.
@@ -210,6 +224,44 @@ kubectl create secret generic openartifact \
   --from-literal=AUTH_HMAC_KEY="$(openssl rand -hex 32)" \
   --from-literal=OPENARTIFACT_SECRET_KEY="$(openssl rand -hex 32)"
 ```
+
+## First admin
+
+On an empty database the server creates the user `admin`. Without configuration it
+prints a random password once to the pod log, valid for 24 hours. To choose it instead,
+use one of two modes (they are mutually exclusive); the Secret is mounted read-only as
+files under `/etc/openartifact/bootstrap` and the server reads it through
+`OPENARTIFACT_BOOTSTRAP_ADMIN_PASSWORD_FILE` (and `..._ADMIN_TOKEN_FILE`), so nothing
+is printed and no password change is forced (`bootstrap.forcePasswordChange=true`
+forces one).
+
+- `bootstrap.createSecret=true`: the chart creates `<fullname>-bootstrap` (`openartifact-bootstrap` for a release named `openartifact`) with
+  a random 32-character `admin-password`, generated once through `lookup` and reused on
+  every upgrade (kept on `helm uninstall` like the main Secret).
+- `bootstrap.existingSecret=<name>`: your own Secret with the key `admin-password`.
+
+```sh
+kubectl create secret generic openartifact-bootstrap \
+  --from-literal=admin-password="$(openssl rand -base64 24)" \
+  --from-literal=admin-token="oa_pat_$(openssl rand -hex 32)"
+```
+
+Set `bootstrap.adminToken.enabled=true` to also create an admin API token named
+`bootstrap` from the key `admin-token` (`oa_pat_` followed by 32 to 128 characters of
+`A-Za-z0-9_-`; `createSecret` generates one), so `oa apply` works on the first sync;
+`bootstrap.adminToken.ttl` (for example `720h`) limits its lifetime. Read the values back
+with `kubectl get secret <name> -o jsonpath='{.data.admin-password}' | base64 -d`
+(`admin-token` likewise); `helm install` prints the exact command.
+
+Notes:
+
+- The settings only apply to an **empty** database. An existing admin is never reset
+  and a token is never added later; to change a password afterwards use `cmd/resetpw`.
+- `createSecret` relies on `lookup`, which returns nothing under `helm template`: Argo CD
+  (and any tool that renders with `helm template`) would generate a new password on every
+  render. With Argo CD use `bootstrap.existingSecret`.
+- This needs an OpenArtifact release that supports the bootstrap settings (0.11.0
+  or newer). Older images ignore them and print a random password instead.
 
 ## Exposure
 

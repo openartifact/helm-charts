@@ -205,6 +205,27 @@ secrets:
   # -- Keep the chart-managed Secret on `helm uninstall` so the encryption key survives.
   keepOnUninstall: true
 
+# First admin account. Only applied by the server to an EMPTY database (see the
+# README, "First admin"); an existing admin is never changed. Needs an OpenArtifact
+# release that supports the bootstrap settings (0.11.0 or newer): older images
+# ignore them and print a random password instead.
+bootstrap:
+  # -- Existing Secret with the key `admin-password` and, when adminToken.enabled, `admin-token`.
+  # Mounted read-only as files. Use this with Argo CD or any tool that renders with `helm template`.
+  existingSecret: ""
+  # -- Let the chart create the Secret `<fullname>-bootstrap` with a random admin password
+  # (and token) generated once via `lookup`, so it stays stable across upgrades. `lookup`
+  # returns nothing under `helm template`: with Argo CD use existingSecret instead.
+  createSecret: false
+  # -- Force a password change at the first login (OPENARTIFACT_BOOTSTRAP_FORCE_PASSWORD_CHANGE).
+  forcePasswordChange: false
+  adminToken:
+    # -- Also create an admin API token named `bootstrap` from the Secret key `admin-token`
+    # (`oa_pat_` + 32 to 128 characters), so `oa apply` works on the first sync.
+    enabled: false
+    # -- Lifetime of that token (Go duration, e.g. 720h); empty = no expiry.
+    ttl: ""
+
 database:
   # -- DB_SSLMODE: disable | require | verify-ca | verify-full.
   sslMode: require

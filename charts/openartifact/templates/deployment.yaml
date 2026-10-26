@@ -366,6 +366,23 @@ spec:
                   key: passphrase
                   optional: true
             {{- end }}
+            {{- if include "openartifact.bootstrapEnabled" . }}
+            # First admin (applied only to an empty database)
+            - name: OPENARTIFACT_BOOTSTRAP_ADMIN_PASSWORD_FILE
+              value: /etc/openartifact/bootstrap/admin-password
+            {{- if .Values.bootstrap.adminToken.enabled }}
+            - name: OPENARTIFACT_BOOTSTRAP_ADMIN_TOKEN_FILE
+              value: /etc/openartifact/bootstrap/admin-token
+            {{- with .Values.bootstrap.adminToken.ttl }}
+            - name: OPENARTIFACT_BOOTSTRAP_ADMIN_TOKEN_TTL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.bootstrap.forcePasswordChange }}
+            - name: OPENARTIFACT_BOOTSTRAP_FORCE_PASSWORD_CHANGE
+              value: "true"
+            {{- end }}
+            {{- end }}
             {{- range $k, $v := .Values.env }}
             - name: {{ $k }}
               value: {{ $v | toString | quote }}
@@ -405,6 +422,11 @@ spec:
             {{- if .Values.gpg.enabled }}
             - name: gpg
               mountPath: /etc/openartifact/gpg
+              readOnly: true
+            {{- end }}
+            {{- if include "openartifact.bootstrapEnabled" . }}
+            - name: bootstrap
+              mountPath: /etc/openartifact/bootstrap
               readOnly: true
             {{- end }}
             {{- with .Values.extraVolumeMounts }}
@@ -472,6 +494,19 @@ spec:
             items:
               - key: private.key
                 path: private.key
+        {{- end }}
+        {{- if include "openartifact.bootstrapEnabled" . }}
+        - name: bootstrap
+          secret:
+            secretName: {{ include "openartifact.bootstrapSecretName" . }}
+            defaultMode: 0440
+            items:
+              - key: admin-password
+                path: admin-password
+              {{- if .Values.bootstrap.adminToken.enabled }}
+              - key: admin-token
+                path: admin-token
+              {{- end }}
         {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}

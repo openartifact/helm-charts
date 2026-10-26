@@ -73,6 +73,17 @@ jobs:
             echo "expected render failure for replicaCount=2 on ReadWriteOnce filesystem storage" >&2
             exit 1
           fi
+          # The bootstrap Secret modes are mutually exclusive, and the token needs a Secret.
+          if helm template t charts/openartifact --set database.external.host=pg --set bootstrap.existingSecret=x --set bootstrap.createSecret=true >/dev/null 2>&1; then
+            echo "expected render failure for bootstrap.existingSecret together with bootstrap.createSecret" >&2
+            exit 1
+          fi
+          if helm template t charts/openartifact --set database.external.host=pg --set bootstrap.adminToken.enabled=true >/dev/null 2>&1; then
+            echo "expected render failure for bootstrap.adminToken.enabled without a Secret" >&2
+            exit 1
+          fi
+          helm template t charts/openartifact --set database.external.host=pg --set bootstrap.existingSecret=x --set bootstrap.adminToken.enabled=true |
+            grep -q OPENARTIFACT_BOOTSTRAP_ADMIN_TOKEN_FILE
 
       - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         if: steps.list-changed.outputs.changed == 'true'

@@ -59,6 +59,15 @@ app.kubernetes.io/part-of: openartifact
 {{- default (include "openartifact.fullname" .) .Values.secrets.existingSecret }}
 {{- end }}
 
+{{- /* Secret holding the bootstrap admin password (and token) files. */}}
+{{- define "openartifact.bootstrapSecretName" -}}
+{{- default (printf "%s-bootstrap" (include "openartifact.fullname" .)) .Values.bootstrap.existingSecret }}
+{{- end }}
+
+{{- define "openartifact.bootstrapEnabled" -}}
+{{- if or .Values.bootstrap.existingSecret .Values.bootstrap.createSecret }}true{{- end }}
+{{- end }}
+
 {{- define "openartifact.storageSecretName" -}}
 {{- default (printf "%s-storage" (include "openartifact.fullname" .)) .Values.storage.credentials.existingSecret }}
 {{- end }}
@@ -115,6 +124,15 @@ app.kubernetes.io/part-of: openartifact
 {{- end }}
 {{- if and .Values.secrets.existingSecret .Values.database.external.password (not .Values.cnpg.enabled) }}
 {{- fail "database.external.password is stored in the chart-managed Secret; with secrets.existingSecret put DB_PASSWORD there or use database.external.existingSecret" }}
+{{- end }}
+{{- if and .Values.bootstrap.existingSecret .Values.bootstrap.createSecret }}
+{{- fail "bootstrap.existingSecret and bootstrap.createSecret are mutually exclusive" }}
+{{- end }}
+{{- if and .Values.bootstrap.adminToken.enabled (not (include "openartifact.bootstrapEnabled" .)) }}
+{{- fail "bootstrap.adminToken.enabled requires bootstrap.existingSecret (with an admin-token key) or bootstrap.createSecret=true" }}
+{{- end }}
+{{- if and .Values.bootstrap.adminToken.ttl (not .Values.bootstrap.adminToken.enabled) }}
+{{- fail "bootstrap.adminToken.ttl requires bootstrap.adminToken.enabled=true" }}
 {{- end }}
 {{- if and .Values.gpg.enabled (not .Values.gpg.existingSecret) }}
 {{- fail "gpg.enabled requires gpg.existingSecret" }}
