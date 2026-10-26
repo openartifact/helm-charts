@@ -54,6 +54,74 @@ app.kubernetes.io/part-of: openartifact
 {{- end }}
 {{- end }}
 
+{{- define "openartifact.collectorImage" -}}
+{{- $img := .Values.telemetry.collector.image }}
+{{- $repo := printf "%s/%s" $img.registry $img.repository | trimPrefix "/" }}
+{{- if $img.digest }}
+{{- printf "%s@%s" $repo $img.digest }}
+{{- else }}
+{{- printf "%s:%s" $repo $img.tag }}
+{{- end }}
+{{- end }}
+
+{{/* Collector sidecar configuration: telemetry.collector.config verbatim, else the rendered default. */}}
+{{- define "openartifact.collectorConfig" -}}
+{{- $c := .Values.telemetry.collector }}
+{{- if $c.config }}
+{{- toYaml $c.config }}
+{{- else }}
+{{- $exporter := ternary "otlp_http" "otlp_grpc" (hasPrefix "http" $c.exporter.protocol) }}
+{{- $pipelines := list "traces" "metrics" "logs" }}
+{{- $endpoint := $c.exporter.endpoint }}
+{{- if and $endpoint (eq $exporter "otlp_grpc") }}
+{{- /* otlp_grpc needs host:port; keep the scheme (TLS choice) and add the port the URL implies. */}}
+{{- $host := regexReplaceAll "^(https?://)?([^/?#]*).*$" $endpoint "${2}" }}
+{{- $host = regexReplaceAll ":[0-9]+$" $host "" }}
+{{- $endpoint = printf "%s%s:%s" (regexFind "^https?://" $endpoint) $host (include "openartifact.otlpPort" $c.exporter) }}
+{{- end }}
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  file_storage:
+    directory: /var/lib/otelcol/file_storage
+    create_directory: true
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4317
+      http:
+        endpoint: 127.0.0.1:4318
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch: {}
+exporters:
+  {{ $exporter }}:
+    endpoint: {{ $endpoint | quote }}
+    {{- if $c.exporter.insecure }}
+    tls:
+      insecure: true
+    {{- end }}
+    {{- if $c.exporter.headersExistingSecret }}
+    headers: ${env:OTLP_EXPORTER_HEADERS}
+    {{- end }}
+    sending_queue:
+      storage: file_storage
+service:
+  extensions: [health_check, file_storage]
+  pipelines:
+    {{- range $pipelines }}
+    {{ . }}:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [{{ $exporter }}]
+    {{- end }}
+{{- end }}
+{{- end }}
+
 {{/* Name of the Secret holding application secrets (envFrom). */}}
 {{- define "openartifact.secretName" -}}
 {{- default (include "openartifact.fullname" .) .Values.secrets.existingSecret }}
@@ -166,6 +234,22 @@ URL endpoint: its port, else 443 for https:// and 80 for http://. host[:port]: i
 {{- end }}
 {{- if and .Values.telemetry.otlp.headersExistingSecret (not .Values.telemetry.otlp.enabled) }}
 {{- fail "telemetry.otlp.headersExistingSecret requires telemetry.otlp.enabled=true" }}
+{{- end }}
+{{- with .Values.telemetry.collector }}
+{{- if .enabled }}
+{{- if not $.Values.telemetry.otlp.enabled }}
+{{- fail "telemetry.collector.enabled requires telemetry.otlp.enabled=true" }}
+{{- end }}
+{{- if $.Values.telemetry.otlp.endpoint }}
+{{- fail "telemetry.collector.enabled exports the app to the sidecar on localhost: leave telemetry.otlp.endpoint empty and set telemetry.collector.exporter.endpoint" }}
+{{- end }}
+{{- if and (not .exporter.endpoint) (not .config) }}
+{{- fail "telemetry.collector.enabled requires telemetry.collector.exporter.endpoint (or a full telemetry.collector.config)" }}
+{{- end }}
+{{- if and (eq .exporter.protocol "http") .exporter.endpoint (not (regexMatch "^https?://" .exporter.endpoint)) }}
+{{- fail "telemetry.collector.exporter.protocol=http needs an http(s):// URL in telemetry.collector.exporter.endpoint" }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- if and .Values.metrics.serviceMonitor.enabled (not .Values.metrics.enabled) }}
 {{- fail "metrics.serviceMonitor.enabled requires metrics.enabled=true" }}

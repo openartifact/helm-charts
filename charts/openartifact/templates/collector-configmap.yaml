@@ -1,0 +1,15 @@
+{{- /*
+SPDX-FileCopyrightText: The OpenArtifact Authors
+SPDX-License-Identifier: AGPL-3.0-or-later
+*/ -}}
+{{- if .Values.telemetry.collector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openartifact.fullname" . }}-otel-collector
+  labels:
+    {{- include "openartifact.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- include "openartifact.collectorConfig" . | nindent 4 }}
+{{- end }}

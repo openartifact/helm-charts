@@ -178,6 +178,43 @@ telemetry:
     # (k=v,k2=v2, values percent-encoded) under `headersSecretKey`. Never put them in values.
     headersExistingSecret: ""
     headersSecretKey: OTEL_EXPORTER_OTLP_HEADERS
+  # -- OpenTelemetry Collector (contrib) sidecar, off by default. Requires telemetry.otlp.enabled
+  # with an empty telemetry.otlp.endpoint: the app then exports to the sidecar on localhost
+  # (telemetry.otlp.protocol picks grpc or http), and telemetry.otlp.headersExistingSecret is
+  # not used. The sidecar batches, queues and retries; its queue survives container restarts,
+  # not the loss of the pod.
+  collector:
+    enabled: false
+    image:
+      registry: docker.io
+      repository: otel/opentelemetry-collector-contrib
+      tag: 0.163.2
+      # -- Image digest (sha256:...); takes precedence over the tag when set.
+      digest: ""
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    exporter:
+      # -- Backend the sidecar exports to: host:port or http(s) URL for grpc, http(s) URL for http.
+      # Required unless `config` is set.
+      endpoint: ""
+      # -- grpc | http (OTLP/HTTP protobuf).
+      protocol: grpc
+      # -- Plaintext to the backend.
+      insecure: false
+      # -- Existing Secret holding the backend headers as a YAML or JSON map under
+      # `headersSecretKey`, e.g. {"authorization": "Bearer ..."}. Never put them in values.
+      headersExistingSecret: ""
+      headersSecretKey: headers
+    # -- Size limit of the emptyDir holding the persistent sending queue.
+    queueSizeLimit: 1Gi
+    # -- Full Collector configuration (a map) replacing the rendered one. The app still exports
+    # to localhost:4317 (grpc) or localhost:4318 (http).
+    config: {}
 
 pprof:
   # -- Mount Go's runtime profiler at /api/v1/admin/pprof/ (OPENARTIFACT_PPROF_ENABLED).
@@ -471,11 +508,13 @@ networkPolicy:
     enabled: false
     # -- Allow DNS (port 53 UDP/TCP) to any namespace.
     dns: true
-    # -- Allow the OTLP collector when telemetry.otlp.enabled. `to` is a list of NetworkPolicy
+    # -- Allow the OTLP collector when telemetry.otlp.enabled (with telemetry.collector.enabled,
+    # the sidecar's exporter endpoint instead). `to` is a list of NetworkPolicy
     # peers (namespaceSelector/podSelector/ipBlock); empty = any destination on the port.
     otlp:
       to: []
-      # -- Overrides the port derived from telemetry.otlp.endpoint: its port when it has one, else
+      # -- Overrides the port derived from the endpoint (telemetry.otlp.endpoint, or
+      # telemetry.collector.exporter.endpoint with the sidecar): its port when it has one, else
       # 443 for https:// and 80 for http:// URLs, else 4317 (grpc) or 4318 (http).
       port: null
     # -- Allow scanner downloads (databases from ghcr.io, mirror.gcr.io, grype.anchore.io and,

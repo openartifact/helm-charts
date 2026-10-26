@@ -48,7 +48,8 @@ spec:
           protocol: TCP
     {{- end }}
     {{- if $.Values.telemetry.otlp.enabled }}
-    {{- $port := include "openartifact.otlpPort" $.Values.telemetry.otlp }}
+    {{- /* With the sidecar the app talks to localhost (not subject to the policy); the sidecar dials the exporter endpoint. */}}
+    {{- $port := include "openartifact.otlpPort" (ternary $.Values.telemetry.collector.exporter $.Values.telemetry.otlp $.Values.telemetry.collector.enabled) }}
     {{- if .otlp.port }}{{ $port = .otlp.port }}{{ end }}
     - ports:
         - port: {{ int $port }}

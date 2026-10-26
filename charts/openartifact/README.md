@@ -199,6 +199,31 @@ dials: the port of a URL endpoint, else `443` for `https://` and `80` for `http:
 of a `host:port` endpoint, else `4317` (grpc) or `4318` (http).
 `networkPolicy.egress.otlp.port` overrides it.
 
+### Collector sidecar
+
+`telemetry.collector.enabled=true` runs an [OpenTelemetry Collector
+(contrib)](https://github.com/open-telemetry/opentelemetry-collector-releases) as a native
+sidecar: it starts before the app and stops after it, has a liveness probe and no readiness
+probe, so it never gates the app's readiness. It needs `telemetry.otlp.enabled=true` with an
+empty `telemetry.otlp.endpoint`: the app then exports to `localhost:4317` (grpc) or
+`http://localhost:4318` (http, per `telemetry.otlp.protocol`) and the sidecar forwards traces,
+metrics and logs to `telemetry.collector.exporter.endpoint` through `memory_limiter`, `batch`
+and a `file_storage` sending queue on an `emptyDir`. The queue survives container restarts,
+not the loss of the pod. The NetworkPolicy egress rule is then derived from the exporter
+endpoint; localhost traffic is not subject to it.
+
+| Value | Meaning |
+|---|---|
+| `telemetry.collector.image.*` | Pinned `otel/opentelemetry-collector-contrib` image. |
+| `telemetry.collector.resources` | Sidecar resources; `memory_limiter` uses 80% of the memory limit. |
+| `telemetry.collector.exporter.endpoint` / `.protocol` / `.insecure` | Backend, `grpc` or `http`, plaintext. |
+| `telemetry.collector.exporter.headersExistingSecret` / `.headersSecretKey` | Secret key holding the backend headers as a YAML or JSON map, e.g. `{"authorization": "Bearer ..."}`. `telemetry.otlp.headersExistingSecret` is not used with the sidecar. |
+| `telemetry.collector.queueSizeLimit` | Size limit of the queue `emptyDir`. |
+| `telemetry.collector.config` | Full Collector configuration replacing the rendered one. |
+
+Gateway or Operator-managed Collectors are not shipped by the chart: point
+`telemetry.otlp.endpoint` at them instead.
+
 ## Retention, tiering and scratch space
 
 - `blobDeletion.*` (grace, sweep interval, batch), `tiering.*` (mover switch, interval,

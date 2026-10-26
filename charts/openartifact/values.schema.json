@@ -602,6 +602,41 @@
               "minLength": 1
             }
           }
+        },
+        "collector": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "image": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "registry": { "type": "string" },
+                "repository": { "type": "string", "minLength": 1 },
+                "tag": { "type": "string", "minLength": 1 },
+                "digest": { "type": "string", "pattern": "^(|sha256:[a-f0-9]{64})$" },
+                "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+              }
+            },
+            "resources": { "type": "object" },
+            "exporter": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "endpoint": { "type": "string" },
+                "protocol": { "enum": ["grpc", "http"] },
+                "insecure": { "type": "boolean" },
+                "headersExistingSecret": { "type": "string" },
+                "headersSecretKey": { "type": "string", "minLength": 1 }
+              }
+            },
+            "queueSizeLimit": {
+              "type": "string",
+              "pattern": "^(|[0-9]+(\\.[0-9]+)?(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m)?)$"
+            },
+            "config": { "type": "object" }
+          }
         }
       }
     },

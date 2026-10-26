@@ -6,6 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 {{- $fullname := include "openartifact.fullname" . }}
 {{- $fs := include "openartifact.filesystemStorage" . }}
 {{- $storageCreds := include "openartifact.storageCredentials" . | fromYaml }}
+{{- $collector := .Values.telemetry.collector }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,6 +36,9 @@ spec:
     metadata:
       annotations:
         checksum/secrets: {{ list .Values.secrets .Values.storage.credentials .Values.database.external.password .Values.metrics.authToken | toYaml | sha256sum }}
+        {{- if $collector.enabled }}
+        checksum/collector-config: {{ include "openartifact.collectorConfig" . | sha256sum }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -56,9 +60,51 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
-      {{- with .Values.extraInitContainers }}
+      {{- if or $collector.enabled .Values.extraInitContainers }}
       initContainers:
+        {{- if $collector.enabled }}
+        # Native sidecar: starts before the app and stops after it, so the app's final
+        # telemetry flush still reaches it.
+        - name: otel-collector
+          image: {{ include "openartifact.collectorImage" . }}
+          imagePullPolicy: {{ $collector.image.pullPolicy }}
+          restartPolicy: Always
+          args:
+            - --config=/etc/otelcol/config.yaml
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with $collector.exporter.headersExistingSecret }}
+          env:
+            - name: OTLP_EXPORTER_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: {{ $collector.exporter.headersSecretKey }}
+          {{- end }}
+          ports:
+            - name: otel-health
+              containerPort: 13133
+              protocol: TCP
+          # Liveness only: the Collector must never gate the app's readiness.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: otel-health
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml $collector.resources | nindent 12 }}
+          volumeMounts:
+            - name: otel-collector-config
+              mountPath: /etc/otelcol
+              readOnly: true
+            - name: otel-collector-queue
+              mountPath: /var/lib/otelcol/file_storage
+        {{- end }}
+        {{- with .Values.extraInitContainers }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
       containers:
         - name: openartifact
@@ -320,15 +366,20 @@ spec:
             {{- if .enabled }}
             - name: OPENARTIFACT_OTLP_ENABLED
               value: "true"
+            {{- if $collector.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ ternary "http://localhost:4318" "localhost:4317" (hasPrefix "http" (.protocol | default "")) | quote }}
+            {{- else }}
             {{- with .endpoint }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ . | quote }}
+            {{- end }}
             {{- end }}
             {{- with .protocol }}
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: {{ . | quote }}
             {{- end }}
-            {{- if .insecure }}
+            {{- if or .insecure $collector.enabled }}
             - name: OTEL_EXPORTER_OTLP_INSECURE
               value: "true"
             {{- end }}
@@ -344,12 +395,14 @@ spec:
             - name: OTEL_METRICS_EXPORTER
               value: otlp
             {{- end }}
+            {{- if not $collector.enabled }}
             {{- with .headersExistingSecret }}
             - name: OTEL_EXPORTER_OTLP_HEADERS
               valueFrom:
                 secretKeyRef:
                   name: {{ . }}
                   key: {{ $.Values.telemetry.otlp.headersSecretKey }}
+            {{- end }}
             {{- end }}
             {{- end }}
             {{- end }}
@@ -511,6 +564,18 @@ spec:
               - key: admin-token
                 path: admin-token
               {{- end }}
+        {{- end }}
+        {{- if $collector.enabled }}
+        - name: otel-collector-config
+          configMap:
+            name: {{ $fullname }}-otel-collector
+        - name: otel-collector-queue
+          emptyDir:
+            {{- with $collector.queueSizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }}
+            {}
+            {{- end }}
         {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
