@@ -5,6 +5,52 @@ entries:
       artifacthub.io/changes: |
         - kind: changed
           description: terminationGracePeriodSeconds now defaults to 75 so a pod stopping during a backup or scan can finish its graceful shutdown (30 s HTTP drain + 15 s background tasks + audit and telemetry flushes).
+        - kind: added
+          description: bootstrap.* values supply the first admin password and an admin API token from a Secret (existing or chart-created), applied only to an empty database.
+        - kind: changed
+          description: Default image OpenArtifact 0.11.0 (migrations 081-085, redesigned web UI with moved URLs that redirect, Scalar API reference at /api/reference, generated bootstrap passwords expire after 24 h; see the upgrade notes).
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.11.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.11.0
+    created: "2026-10-26T19:08:56.549370861Z"
+    description: 'Self-hosted artifact repository for 16 package formats: Maven, npm,
+      PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan,
+      Ivy, sbt and raw.'
+    digest: 5aa0b9d538100caeac63139d84374fee7c5e308567f696e186c9c6194f072798
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.8.0/openartifact-0.8.0.tgz
+    version: 0.8.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: terminationGracePeriodSeconds now defaults to 75 so a pod stopping during a backup or scan can finish its graceful shutdown (30 s HTTP drain + 15 s background tasks + audit and telemetry flushes).
         - kind: changed
           description: Default image OpenArtifact 0.10.0 (no migrations; white-label branding, oa CI commands, audit retention; /manifest.webmanifest is now served by the server, see the upgrade notes).
       artifacthub.io/images: |
@@ -603,4 +649,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-25T18:45:55.490913684Z"
+generated: "2026-10-26T19:08:56.549511826Z"
