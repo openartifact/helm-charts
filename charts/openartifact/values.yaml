@@ -215,10 +215,20 @@ telemetry:
     # -- Full Collector configuration (a map) replacing the rendered one. The app still exports
     # to localhost:4317 (grpc) or localhost:4318 (http).
     config: {}
+    # -- EXPERIMENTAL, no compatibility promise (OTLP profiles is Alpha): scrape the app's pprof
+    # endpoints with the contrib pprof receiver and export them in a profiles pipeline to the same
+    # exporter. Requires pprof.enabled and a backend that accepts OTLP profiles.
+    pprof:
+      enabled: false
+      # -- Existing Secret holding an admin API token for the scrape under `tokenSecretKey`.
+      tokenExistingSecret: ""
+      tokenSecretKey: token
+      # -- Scrape interval.
+      interval: 60s
 
 pprof:
   # -- Mount Go's runtime profiler at /api/v1/admin/pprof/ (OPENARTIFACT_PPROF_ENABLED).
-  # Admin only; leave it off outside diagnostics.
+  # Admin only; leave it off outside diagnostics. Required by telemetry.collector.pprof.
   enabled: false
 
 # -- Extra plain environment variables (name: value), e.g. AI_ENABLED: "true".

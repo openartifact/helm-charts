@@ -71,15 +71,27 @@ spec:
           restartPolicy: Always
           args:
             - --config=/etc/otelcol/config.yaml
+            {{- if $collector.pprof.enabled }}
+            - --feature-gates=+service.profilesSupport
+            {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          {{- with $collector.exporter.headersExistingSecret }}
+          {{- if or $collector.exporter.headersExistingSecret $collector.pprof.enabled }}
           env:
+            {{- with $collector.exporter.headersExistingSecret }}
             - name: OTLP_EXPORTER_HEADERS
               valueFrom:
                 secretKeyRef:
                   name: {{ . }}
                   key: {{ $collector.exporter.headersSecretKey }}
+            {{- end }}
+            {{- if $collector.pprof.enabled }}
+            - name: PPROF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $collector.pprof.tokenExistingSecret }}
+                  key: {{ $collector.pprof.tokenSecretKey }}
+            {{- end }}
           {{- end }}
           ports:
             - name: otel-health

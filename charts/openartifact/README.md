@@ -220,9 +220,21 @@ endpoint; localhost traffic is not subject to it.
 | `telemetry.collector.exporter.headersExistingSecret` / `.headersSecretKey` | Secret key holding the backend headers as a YAML or JSON map, e.g. `{"authorization": "Bearer ..."}`. `telemetry.otlp.headersExistingSecret` is not used with the sidecar. |
 | `telemetry.collector.queueSizeLimit` | Size limit of the queue `emptyDir`. |
 | `telemetry.collector.config` | Full Collector configuration replacing the rendered one. |
+| `telemetry.collector.pprof.*` | Experimental profiles scrape, see below. |
 
 Gateway or Operator-managed Collectors are not shipped by the chart: point
 `telemetry.otlp.endpoint` at them instead.
+
+### Profiles (experimental)
+
+`pprof.enabled=true` serves Go's runtime profiler at `/api/v1/admin/pprof/` (admin only).
+With the sidecar, `telemetry.collector.pprof.enabled=true` scrapes it every
+`telemetry.collector.pprof.interval` with the contrib `pprof` receiver (CPU, heap, goroutine,
+mutex, block) and sends a `profiles` pipeline to the same exporter, with the
+`service.profilesSupport` feature gate on. The scrape authenticates with an admin API token
+from `telemetry.collector.pprof.tokenExistingSecret` (key `tokenSecretKey`); never put it in
+values. OTLP profiles is Alpha (proto `v1development`): this has no compatibility promise and
+the backend must accept OTLP profiles.
 
 ## Retention, tiering and scratch space
 

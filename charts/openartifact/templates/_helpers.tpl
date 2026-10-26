@@ -79,6 +79,7 @@ app.kubernetes.io/part-of: openartifact
 {{- $host = regexReplaceAll ":[0-9]+$" $host "" }}
 {{- $endpoint = printf "%s%s:%s" (regexFind "^https?://" $endpoint) $host (include "openartifact.otlpPort" $c.exporter) }}
 {{- end }}
+{{- $profileTypes := list "profile?seconds=10" "heap" "goroutine" "mutex" "block" }}
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -92,6 +93,16 @@ receivers:
         endpoint: 127.0.0.1:4317
       http:
         endpoint: 127.0.0.1:4318
+  {{- if $c.pprof.enabled }}
+  {{- range $profileTypes }}
+  pprof/{{ regexReplaceAll "\\?.*" . "" }}:
+    remote:
+      endpoint: http://127.0.0.1:8080/api/v1/admin/pprof/{{ . }}
+      collection_interval: {{ $c.pprof.interval }}
+      headers:
+        Authorization: "Bearer ${env:PPROF_TOKEN}"
+  {{- end }}
+  {{- end }}
 processors:
   memory_limiter:
     check_interval: 1s
@@ -117,6 +128,16 @@ service:
     {{ . }}:
       receivers: [otlp]
       processors: [memory_limiter, batch]
+      exporters: [{{ $exporter }}]
+    {{- end }}
+    {{- if $c.pprof.enabled }}
+    profiles:
+      receivers:
+        {{- range $profileTypes }}
+        - pprof/{{ regexReplaceAll "\\?.*" . "" }}
+        {{- end }}
+      # The batch processor does not support profiles.
+      processors: [memory_limiter]
       exporters: [{{ $exporter }}]
     {{- end }}
 {{- end }}
@@ -248,6 +269,17 @@ URL endpoint: its port, else 443 for https:// and 80 for http://. host[:port]: i
 {{- end }}
 {{- if and (eq .exporter.protocol "http") .exporter.endpoint (not (regexMatch "^https?://" .exporter.endpoint)) }}
 {{- fail "telemetry.collector.exporter.protocol=http needs an http(s):// URL in telemetry.collector.exporter.endpoint" }}
+{{- end }}
+{{- end }}
+{{- if .pprof.enabled }}
+{{- if not .enabled }}
+{{- fail "telemetry.collector.pprof.enabled requires telemetry.collector.enabled=true" }}
+{{- end }}
+{{- if not $.Values.pprof.enabled }}
+{{- fail "telemetry.collector.pprof.enabled requires pprof.enabled=true" }}
+{{- end }}
+{{- if not .pprof.tokenExistingSecret }}
+{{- fail "telemetry.collector.pprof.enabled requires telemetry.collector.pprof.tokenExistingSecret (an admin API token)" }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -635,7 +635,20 @@
               "type": "string",
               "pattern": "^(|[0-9]+(\\.[0-9]+)?(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m)?)$"
             },
-            "config": { "type": "object" }
+            "config": { "type": "object" },
+            "pprof": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "tokenExistingSecret": { "type": "string" },
+                "tokenSecretKey": { "type": "string", "minLength": 1 },
+                "interval": {
+                  "type": "string",
+                  "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
+                }
+              }
+            }
           }
         }
       }
