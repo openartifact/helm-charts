@@ -44,6 +44,17 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.9.0 (OpenArtifact 0.12.0)
+
+- Migration `086` drops the stored `search_tsv` columns and the RPM signing key columns.
+  **A rolling upgrade must start from OpenArtifact 0.11.x** (chart 0.8.x): 0.10.x pods still
+  read those columns. From 0.10.x, scale the Deployment to zero before upgrading, or step
+  through chart 0.8.0 first.
+- The web UI is translated into seven languages (the browser language is used; nothing to
+  configure). The `annotate` permission is now enforced for artifact property writes.
+- See the
+  [upgrade notes](https://openartifact.github.io/v0.12/getting-started/upgrading.html#_0-12-0).
+
 ## Upgrading to 0.8.0 (OpenArtifact 0.11.0)
 
 - Migrations `081` to `085`; rolling upgrade, 0.10.0 pods keep serving while new pods migrate.
