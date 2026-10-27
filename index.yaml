@@ -4,6 +4,61 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Default image OpenArtifact 0.13.0 (migrations 087 to 090 are rolling-safe from 0.12.x; Terraform/OpenTofu, Alpine apk and Arch Linux pacman repositories, proxy and group repositories for more formats, OpenAPI 3.1.1).
+        - kind: added
+          description: telemetry.otlp.traces, logs and audit switch the OTLP signals individually (app 0.13.0 or newer).
+        - kind: added
+          description: Optional OpenTelemetry Collector (contrib) sidecar, telemetry.collector.enabled (off by default), with a persistent sending queue; the app then exports to localhost.
+        - kind: added
+          description: pprof.enabled renders OPENARTIFACT_PPROF_ENABLED; experimental telemetry.collector.pprof scrape into an OTLP profiles pipeline.
+        - kind: fixed
+          description: The OTLP egress NetworkPolicy rule opens 443 for https:// and 80 for http:// endpoints without a port, matching what the exporter dials.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.13.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.163.2
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.13.0
+    created: "2026-10-27T22:12:09.091919646Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda,
+      Conan, Ivy, sbt and raw.'
+    digest: d7bd56703e1f31a169559110af80eef08356d859cacad296b4927626052da907
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.10.0/openartifact-0.10.0.tgz
+    version: 0.10.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Default image OpenArtifact 0.12.0 (migration 086 drops columns, so a rolling upgrade must start from 0.11.x; web UI in 7 languages, smaller binaries, docker, rpm and deb group fixes, annotate permission enforced; see the upgrade notes).
       artifacthub.io/images: |
         - name: openartifact
@@ -691,4 +746,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-27T07:55:47.33051399Z"
+generated: "2026-10-27T22:12:09.092021988Z"
