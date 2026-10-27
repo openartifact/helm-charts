@@ -44,6 +44,22 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.10.0 (OpenArtifact 0.13.0)
+
+- Migrations `087` to `090` are rolling-safe from OpenArtifact 0.12.x (chart 0.9.x): 0.12.x
+  pods keep serving while new pods migrate. They add the Terraform, apk and pacman tables and
+  drop the unused seeded `local` storage backend record.
+- New optional `telemetry.collector.*` values run an OpenTelemetry Collector sidecar (native
+  sidecar container, Kubernetes 1.29 or newer, which the chart already requires), see
+  "OpenTelemetry". `pprof.enabled` and the per-signal `telemetry.otlp.traces|logs|audit`
+  switches are new; nothing changes unless you set them. The OTLP egress NetworkPolicy rule now
+  follows the port the exporter dials (443 for `https://`, 80 for `http://` without a port).
+- OpenArtifact 0.13.0 publishes its OpenAPI document as 3.1.1 and adds the
+  `workers.proxyUpstreamStallTimeout` setting (`OPENARTIFACT_PROXY_UPSTREAM_STALL_TIMEOUT`,
+  default `60s`; set it through `config` or `extraEnv`).
+- See the
+  [upgrade notes](https://openartifact.github.io/v0.13/getting-started/upgrading.html#_0-13-0).
+
 ## Upgrading to 0.9.0 (OpenArtifact 0.12.0)
 
 - Migration `086` drops the stored `search_tsv` columns and the RPM signing key columns.
@@ -189,7 +205,11 @@ With several replicas each pod downloads its own copy unless the cache is a shar
 
 `telemetry.otlp.enabled=true` exports traces over OTLP (`endpoint`, `protocol`
 `grpc|http`, `insecure`, `serviceName`, `sampleRatio`); `telemetry.otlp.metrics=true`
-also pushes the Prometheus registry. Collector credentials never go in values: put
+also pushes the Prometheus registry. With app 0.13.0 or newer, the per-signal switches
+`telemetry.otlp.traces` (default `true`; `false` renders `OTEL_TRACES_EXPORTER=none`),
+`logs` (`OTEL_LOGS_EXPORTER=otlp`) and `audit` (`OPENARTIFACT_OTLP_AUDIT=true`) select what
+is exported; `logs` and `audit` start the OTLP log provider, but the app writes no records
+to it yet. Collector credentials never go in values: put
 `OTEL_EXPORTER_OTLP_HEADERS` (`k=v,k2=v2`, percent-encoded values) in a Secret and set
 `telemetry.otlp.headersExistingSecret` (and `headersSecretKey` if the key differs). Any other
 `OTEL_*` variable goes through `env` / `extraEnv`. `/metrics` is unaffected.

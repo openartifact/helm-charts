@@ -10,7 +10,7 @@ description: >-
   sbt and raw.
 type: application
 version: 0.10.0
-appVersion: "0.12.0"
+appVersion: "0.13.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -30,6 +30,10 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
+    - kind: changed
+      description: Default image OpenArtifact 0.13.0 (migrations 087 to 090 are rolling-safe from 0.12.x; Terraform/OpenTofu, Alpine apk and Arch Linux pacman repositories, proxy and group repositories for more formats, OpenAPI 3.1.1).
+    - kind: added
+      description: telemetry.otlp.traces, logs and audit switch the OTLP signals individually (app 0.13.0 or newer).
     - kind: added
       description: Optional OpenTelemetry Collector (contrib) sidecar, telemetry.collector.enabled (off by default), with a persistent sending queue; the app then exports to localhost.
     - kind: added
@@ -41,7 +45,7 @@ annotations:
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.12.0
+      image: ghcr.io/openartifact/openartifact:0.13.0
       platforms:
         - linux/amd64
         - linux/arm64

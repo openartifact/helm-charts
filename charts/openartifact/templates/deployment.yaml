@@ -403,9 +403,21 @@ spec:
             - name: OTEL_TRACES_SAMPLER_ARG
               value: {{ .sampleRatio | quote }}
             {{- end }}
+            {{- if not .traces }}
+            - name: OTEL_TRACES_EXPORTER
+              value: none
+            {{- end }}
             {{- if .metrics }}
             - name: OTEL_METRICS_EXPORTER
               value: otlp
+            {{- end }}
+            {{- if .logs }}
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            {{- end }}
+            {{- if .audit }}
+            - name: OPENARTIFACT_OTLP_AUDIT
+              value: "true"
             {{- end }}
             {{- if not $collector.enabled }}
             {{- with .headersExistingSecret }}

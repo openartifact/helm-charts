@@ -172,8 +172,17 @@ telemetry:
     serviceName: ""
     # -- Fraction of new traces recorded, 0..1. null = server default (1).
     sampleRatio: null
+    # -- Export distributed traces and install the HTTP tracing middleware. On by default; false
+    # renders OTEL_TRACES_EXPORTER=none, to export only metrics, logs or audit. Needs app 0.13.0 or newer.
+    traces: true
     # -- Also export the Prometheus registry as OTLP metrics (OTEL_METRICS_EXPORTER=otlp).
     metrics: false
+    # -- Application log records over OTLP (OTEL_LOGS_EXPORTER=otlp). Needs app 0.13.0 or newer;
+    # the app writes no records to it yet.
+    logs: false
+    # -- Audit events over OTLP (OPENARTIFACT_OTLP_AUDIT=true), independent of traces. Needs app
+    # 0.13.0 or newer; the app writes no events to it yet.
+    audit: false
     # -- Existing Secret holding the collector credentials as OTEL_EXPORTER_OTLP_HEADERS
     # (k=v,k2=v2, values percent-encoded) under `headersSecretKey`. Never put them in values.
     headersExistingSecret: ""
@@ -189,8 +198,8 @@ telemetry:
       registry: docker.io
       repository: otel/opentelemetry-collector-contrib
       tag: 0.163.2
-      # -- Image digest (sha256:...); takes precedence over the tag when set.
-      digest: ""
+      # -- Image digest (sha256:...) of the multi-arch index for `tag`; takes precedence over the tag when set.
+      digest: sha256:7f22d2a6748110ffb6a59bc0df448bccbf501cdb667d610ede4c61d3863d5849
       pullPolicy: IfNotPresent
     resources:
       requests:
