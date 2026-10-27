@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.8.0
-appVersion: "0.11.0"
+version: 0.9.0
+appVersion: "0.12.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,17 +31,13 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: terminationGracePeriodSeconds now defaults to 75 so a pod stopping during a backup or scan can finish its graceful shutdown (30 s HTTP drain + 15 s background tasks + audit and telemetry flushes).
-    - kind: added
-      description: bootstrap.* values supply the first admin password and an admin API token from a Secret (existing or chart-created), applied only to an empty database.
-    - kind: changed
-      description: Default image OpenArtifact 0.11.0 (migrations 081-085, redesigned web UI with moved URLs that redirect, Scalar API reference at /api/reference, generated bootstrap passwords expire after 24 h; see the upgrade notes).
+      description: Default image OpenArtifact 0.12.0 (migration 086 drops columns, so a rolling upgrade must start from 0.11.x; web UI in 7 languages, smaller binaries, docker, rpm and deb group fixes, annotate permission enforced; see the upgrade notes).
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.11.0
+      image: ghcr.io/openartifact/openartifact:0.12.0
       platforms:
         - linux/amd64
         - linux/arm64
