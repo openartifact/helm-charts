@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Used by chart-testing (ct install) in CI; requires the CloudNativePG operator.
+# Exercises the OpenTelemetry Collector sidecar (native sidecar, persistent queue)
+# and the egress rule derived from the sidecar's exporter endpoint. No backend runs
+# in CI: the sidecar only queues and retries, which must not affect readiness.
+baseUrl: http://openartifact.local
+cnpg:
+  enabled: true
+  storage:
+    size: 1Gi
+persistence:
+  size: 1Gi
+pprof:
+  enabled: true
+telemetry:
+  otlp:
+    enabled: true
+    protocol: http
+    metrics: true
+  collector:
+    enabled: true
+    exporter:
+      endpoint: http://otel-backend.observability.svc:4318
+      protocol: http
+    queueSizeLimit: 256Mi
+networkPolicy:
+  enabled: true
+  egress:
+    enabled: true
+    extra:
+      - ports:
+          - port: 443
+            protocol: TCP

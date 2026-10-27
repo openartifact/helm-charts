@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.9.0
-appVersion: "0.12.0"
+version: 0.10.0
+appVersion: "0.13.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,13 +31,26 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: Default image OpenArtifact 0.12.0 (migration 086 drops columns, so a rolling upgrade must start from 0.11.x; web UI in 7 languages, smaller binaries, docker, rpm and deb group fixes, annotate permission enforced; see the upgrade notes).
+      description: Default image OpenArtifact 0.13.0 (migrations 087 to 090 are rolling-safe from 0.12.x; Terraform/OpenTofu, Alpine apk and Arch Linux pacman repositories, proxy and group repositories for more formats, OpenAPI 3.1.1).
+    - kind: added
+      description: telemetry.otlp.traces, logs and audit switch the OTLP signals individually (app 0.13.0 or newer).
+    - kind: added
+      description: Optional OpenTelemetry Collector (contrib) sidecar, telemetry.collector.enabled (off by default), with a persistent sending queue; the app then exports to localhost.
+    - kind: added
+      description: pprof.enabled renders OPENARTIFACT_PPROF_ENABLED; experimental telemetry.collector.pprof scrape into an OTLP profiles pipeline.
+    - kind: fixed
+      description: The OTLP egress NetworkPolicy rule opens 443 for https:// and 80 for http:// endpoints without a port, matching what the exporter dials.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.12.0
+      image: ghcr.io/openartifact/openartifact:0.13.0
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    - name: otel-collector
+      image: otel/opentelemetry-collector-contrib:0.163.2
       platforms:
         - linux/amd64
         - linux/arm64

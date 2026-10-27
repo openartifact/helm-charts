@@ -44,6 +44,22 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.10.0 (OpenArtifact 0.13.0)
+
+- Migrations `087` to `090` are rolling-safe from OpenArtifact 0.12.x (chart 0.9.x): 0.12.x
+  pods keep serving while new pods migrate. They add the Terraform, apk and pacman tables and
+  drop the unused seeded `local` storage backend record.
+- New optional `telemetry.collector.*` values run an OpenTelemetry Collector sidecar (native
+  sidecar container, Kubernetes 1.29 or newer, which the chart already requires), see
+  "OpenTelemetry". `pprof.enabled` and the per-signal `telemetry.otlp.traces|logs|audit`
+  switches are new; nothing changes unless you set them. The OTLP egress NetworkPolicy rule now
+  follows the port the exporter dials (443 for `https://`, 80 for `http://` without a port).
+- OpenArtifact 0.13.0 publishes its OpenAPI document as 3.1.1 and adds the
+  `workers.proxyUpstreamStallTimeout` setting (`OPENARTIFACT_PROXY_UPSTREAM_STALL_TIMEOUT`,
+  default `60s`; set it through `config` or `extraEnv`).
+- See the
+  [upgrade notes](https://openartifact.github.io/v0.13/getting-started/upgrading.html#_0-13-0).
+
 ## Upgrading to 0.9.0 (OpenArtifact 0.12.0)
 
 - Migration `086` drops the stored `search_tsv` columns and the RPM signing key columns.
@@ -189,10 +205,56 @@ With several replicas each pod downloads its own copy unless the cache is a shar
 
 `telemetry.otlp.enabled=true` exports traces over OTLP (`endpoint`, `protocol`
 `grpc|http`, `insecure`, `serviceName`, `sampleRatio`); `telemetry.otlp.metrics=true`
-also pushes the Prometheus registry. Collector credentials never go in values: put
+also pushes the Prometheus registry. With app 0.13.0 or newer, the per-signal switches
+`telemetry.otlp.traces` (default `true`; `false` renders `OTEL_TRACES_EXPORTER=none`),
+`logs` (`OTEL_LOGS_EXPORTER=otlp`) and `audit` (`OPENARTIFACT_OTLP_AUDIT=true`) select what
+is exported; `logs` and `audit` start the OTLP log provider, but the app writes no records
+to it yet. Collector credentials never go in values: put
 `OTEL_EXPORTER_OTLP_HEADERS` (`k=v,k2=v2`, percent-encoded values) in a Secret and set
 `telemetry.otlp.headersExistingSecret` (and `headersSecretKey` if the key differs). Any other
 `OTEL_*` variable goes through `env` / `extraEnv`. `/metrics` is unaffected.
+
+With `networkPolicy.egress.enabled`, the OTLP egress rule opens the port the exporter
+dials: the port of a URL endpoint, else `443` for `https://` and `80` for `http://`; the port
+of a `host:port` endpoint, else `4317` (grpc) or `4318` (http).
+`networkPolicy.egress.otlp.port` overrides it.
+
+### Collector sidecar
+
+`telemetry.collector.enabled=true` runs an [OpenTelemetry Collector
+(contrib)](https://github.com/open-telemetry/opentelemetry-collector-releases) as a native
+sidecar: it starts before the app and stops after it, has a liveness probe and no readiness
+probe, so it never gates the app's readiness. It needs `telemetry.otlp.enabled=true` with an
+empty `telemetry.otlp.endpoint`: the app then exports to `localhost:4317` (grpc) or
+`http://localhost:4318` (http, per `telemetry.otlp.protocol`) and the sidecar forwards traces,
+metrics and logs to `telemetry.collector.exporter.endpoint` through `memory_limiter`, `batch`
+and a `file_storage` sending queue on an `emptyDir`. The queue survives container restarts,
+not the loss of the pod. The NetworkPolicy egress rule is then derived from the exporter
+endpoint; localhost traffic is not subject to it.
+
+| Value | Meaning |
+|---|---|
+| `telemetry.collector.image.*` | Pinned `otel/opentelemetry-collector-contrib` image. |
+| `telemetry.collector.resources` | Sidecar resources; `memory_limiter` uses 80% of the memory limit. |
+| `telemetry.collector.exporter.endpoint` / `.protocol` / `.insecure` | Backend, `grpc` or `http`, plaintext. |
+| `telemetry.collector.exporter.headersExistingSecret` / `.headersSecretKey` | Secret key holding the backend headers as a YAML or JSON map, e.g. `{"authorization": "Bearer ..."}`. `telemetry.otlp.headersExistingSecret` is not used with the sidecar. |
+| `telemetry.collector.queueSizeLimit` | Size limit of the queue `emptyDir`. |
+| `telemetry.collector.config` | Full Collector configuration replacing the rendered one. |
+| `telemetry.collector.pprof.*` | Experimental profiles scrape, see below. |
+
+Gateway or Operator-managed Collectors are not shipped by the chart: point
+`telemetry.otlp.endpoint` at them instead.
+
+### Profiles (experimental)
+
+`pprof.enabled=true` serves Go's runtime profiler at `/api/v1/admin/pprof/` (admin only).
+With the sidecar, `telemetry.collector.pprof.enabled=true` scrapes it every
+`telemetry.collector.pprof.interval` with the contrib `pprof` receiver (CPU, heap, goroutine,
+mutex, block) and sends a `profiles` pipeline to the same exporter, with the
+`service.profilesSupport` feature gate on. The scrape authenticates with an admin API token
+from `telemetry.collector.pprof.tokenExistingSecret` (key `tokenSecretKey`); never put it in
+values. OTLP profiles is Alpha (proto `v1development`): this has no compatibility promise and
+the backend must accept OTLP profiles.
 
 ## Retention, tiering and scratch space
 
@@ -290,6 +352,8 @@ Notes:
 - `metrics.enabled` protects `/metrics` with `METRICS_AUTH_TOKEN`;
   `metrics.serviceMonitor.enabled` creates a Prometheus Operator `ServiceMonitor` that
   authenticates with it.
+- `pprof.enabled` sets `OPENARTIFACT_PPROF_ENABLED=true`: Go's runtime profiler is served at
+  `/api/v1/admin/pprof/` to administrators only. Leave it off outside diagnostics.
 - `gpg.enabled` mounts the signing key from `gpg.existingSecret` (`private.key`,
   optional `passphrase`).
 - `networkPolicy.enabled` limits ingress to the HTTP port from `networkPolicy.from`.

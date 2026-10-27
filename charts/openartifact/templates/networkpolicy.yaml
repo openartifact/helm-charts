@@ -48,11 +48,9 @@ spec:
           protocol: TCP
     {{- end }}
     {{- if $.Values.telemetry.otlp.enabled }}
-    {{- $ep := $.Values.telemetry.otlp.endpoint }}
-    {{- $port := ternary 4318 4317 (eq $.Values.telemetry.otlp.protocol "http") }}
-    {{- $epPort := regexFind ":[0-9]+$" (trimSuffix "/" $ep) | trimPrefix ":" }}
-    {{- if $epPort }}{{ $port = int $epPort }}{{ end }}
-    {{- if .otlp.port }}{{ $port = int .otlp.port }}{{ end }}
+    {{- /* With the sidecar the app talks to localhost (not subject to the policy); the sidecar dials the exporter endpoint. */}}
+    {{- $port := include "openartifact.otlpPort" (ternary $.Values.telemetry.collector.exporter $.Values.telemetry.otlp $.Values.telemetry.collector.enabled) }}
+    {{- if .otlp.port }}{{ $port = .otlp.port }}{{ end }}
     - ports:
         - port: {{ int $port }}
           protocol: TCP
