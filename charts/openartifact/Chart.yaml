@@ -5,7 +5,7 @@
 apiVersion: v2
 name: openartifact
 description: >-
-  Self-hosted artifact repository for 16 package formats: Maven, npm, PyPI,
+  Self-hosted artifact repository for many package formats: Maven, npm, PyPI,
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
