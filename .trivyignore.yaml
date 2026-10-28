@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: The OpenArtifact Authors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Trivy ignore file for the image scan of the OpenTelemetry Collector sidecar image only
+# (see security.yml: it is passed to `otel/*` scans, never to the openartifact image).
+vulnerabilities:
+  # go-jose/v4 4.1.5 inside otelcol-contrib 0.163.2 and 0.164.0 (the latest release when this
+  # was added); fixed in go-jose 4.1.6, but no collector release ships it yet. The sidecar is
+  # off by default (telemetry.collector.enabled=false) and the collector does not parse
+  # untrusted JWKs in the chart's configuration. Advisory:
+  # https://osv.dev/vulnerability/CVE-2026-116587. Drop this entry as soon as a collector
+  # release with go-jose >= 4.1.6 is out and pinned; it stops applying on its own at
+  # expired_at.
+  - id: CVE-2026-116587
+    expired_at: 2026-11-27
+    statement: no fixed otelcol-contrib release yet; sidecar off by default

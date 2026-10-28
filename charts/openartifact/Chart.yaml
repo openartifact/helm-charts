@@ -32,6 +32,8 @@ annotations:
   artifacthub.io/changes: |
     - kind: added
       description: config.shutdownDelay (SERVER_SHUTDOWN_DELAY, default 10) keeps a terminating pod serving but not ready before it closes the listener, for graceful rolling updates; terminationGracePeriodSeconds is now 85 and the readiness probe is faster. Needs OpenArtifact 0.13.2 or newer.
+    - kind: security
+      description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
     - kind: changed
       description: Default image OpenArtifact 0.13.2 (no migrations; /ready answers 503 during server.shutdownDelay; new openartifact_telemetry_log_records_dropped_total counter).
   artifacthub.io/signKey: |
