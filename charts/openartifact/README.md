@@ -44,6 +44,17 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.11.0 (OpenArtifact 0.14.0)
+
+- The upgrade from 0.10.x is plain: no values change is required. OpenArtifact 0.14.0 runs
+  migrations `091` to `095` at startup (they are rolling-safe from 0.13.2). `091` drops
+  `storage_backends.is_default`, which 0.12.x pods still read, so upgrade from 0.12.x through
+  0.13.x first.
+- By default the server now downloads the CISA KEV catalog and FIRST EPSS scores once a day
+  (outbound HTTPS to `cisa.gov` and `epss.empiricalsecurity.com`); allow them in your egress
+  policy or set `OPENARTIFACT_EXPLOIT_ENABLED=false`. See the
+  [upgrade notes](https://openartifact.github.io/getting-started/upgrading.html).
+
 ## Upgrading to 0.10.2
 
 - New `config.shutdownDelay` (default `10`, env `SERVER_SHUTDOWN_DELAY`) keeps a terminating
