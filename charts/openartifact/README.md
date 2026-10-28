@@ -44,6 +44,15 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.10.2
+
+- New `config.shutdownDelay` (default `10`, env `SERVER_SHUTDOWN_DELAY`) keeps a terminating
+  pod serving, not ready, before it closes the listener, which removes the occasional failed
+  request during rolling updates. `terminationGracePeriodSeconds` goes from `75` to `85` and
+  the readiness probe from `periodSeconds: 10, failureThreshold: 3` to `3` and `2`; if you
+  override these, add the delay to your grace period. The delay takes effect with
+  OpenArtifact 0.13.2 or newer; older images ignore the value.
+
 ## Upgrading to 0.10.1 (OpenArtifact 0.13.1)
 
 - Image bump only: OpenArtifact 0.13.1 has no migrations and no new settings, so a rolling
@@ -184,6 +193,15 @@ More than one replica (`replicaCount > 1` or `autoscaling.enabled`) needs storag
 pod can mount: an object storage backend, or `persistence.accessModes: [ReadWriteMany]`.
 The chart refuses to render otherwise. With a single `ReadWriteOnce` volume the
 Deployment uses the `Recreate` strategy, so upgrades have a short downtime.
+
+Rolling updates are graceful: on SIGTERM the server answers `503` on `/ready` and keeps
+serving for `config.shutdownDelay` seconds (default `10`) before it stops accepting
+connections, so the Service and the ingress controller stop routing to the pod first
+(the image has no shell for a `preStop` sleep). The readiness probe fails within
+`periodSeconds * failureThreshold` (6 s), and `terminationGracePeriodSeconds` (default `85`)
+covers delay + `config.shutdownTimeout` + the drain. If you raise either value, raise the
+grace period too. This needs OpenArtifact 0.13.2 or newer; older images ignore
+`SERVER_SHUTDOWN_DELAY` and stop accepting connections at once.
 
 ## Vulnerability scanners
 

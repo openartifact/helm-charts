@@ -145,6 +145,8 @@ spec:
               value: "8080"
             - name: SERVER_SHUTDOWN_TIMEOUT
               value: {{ .Values.config.shutdownTimeout | quote }}
+            - name: SERVER_SHUTDOWN_DELAY
+              value: {{ .Values.config.shutdownDelay | quote }}
             - name: DB_CONNECT_TIMEOUT
               value: {{ ternary .Values.database.connectTimeout "0s" .Values.database.waitForDatabase | quote }}
             {{- with .Values.baseUrl }}
