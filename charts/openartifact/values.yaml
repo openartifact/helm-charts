@@ -49,6 +49,12 @@ config:
   # -- Apply schema migrations at startup (guarded by a Postgres advisory lock, safe with several replicas).
   migrateOnStart: true
   shutdownTimeout: 30
+  # -- Seconds the server keeps serving, with /ready answering 503, after SIGTERM and
+  # before it closes the listener (SERVER_SHUTDOWN_DELAY). It covers the lag until the
+  # Service and the ingress controller stop routing to the terminating pod; the image has
+  # no shell, so a preStop sleep is not possible. Needs an OpenArtifact release newer than
+  # 0.13.1: older images ignore it. 0 disables it. Count it in terminationGracePeriodSeconds.
+  shutdownDelay: 10
   # -- Let any authenticated user create a project and become its owner
   # (OPENARTIFACT_PROJECTS_SELF_CREATE). false = only global admins create projects.
   # An administrator can override it at runtime (system setting projects.self_create).
@@ -484,21 +490,26 @@ livenessProbe:
   periodSeconds: 20
   timeoutSeconds: 3
   failureThreshold: 3
+# Kept short on purpose: after SIGTERM /ready answers 503 and the pod has to be marked
+# not ready well within config.shutdownDelay (here at most periodSeconds *
+# failureThreshold = 6 s of the 10 s). Two failures in a row are still needed, so one
+# slow database ping does not take the pod out of the Service.
 readinessProbe:
   httpGet:
     path: /ready
     port: http
-  periodSeconds: 10
+  periodSeconds: 3
   timeoutSeconds: 3
-  failureThreshold: 3
+  failureThreshold: 2
 
 # -- Seconds Kubernetes waits after SIGTERM before SIGKILL. It must cover the
-# whole graceful shutdown of the server, in order: in-flight HTTP requests
-# (config.shutdownTimeout, 30) + cancelled background backups, restores and
-# scans (up to 15) + worker stop and final audit flush (up to 5) + telemetry
-# flush (up to 5) = 55, plus headroom for the workers to finish their current
-# pass. Raise it together with config.shutdownTimeout.
-terminationGracePeriodSeconds: 75
+# whole graceful shutdown of the server, in order: the not-ready delay
+# (config.shutdownDelay, 10) + in-flight HTTP requests (config.shutdownTimeout, 30)
+# + cancelled background backups, restores and scans (up to 15) + worker stop and
+# final audit flush (up to 5) + telemetry flush (up to 5) = 65, plus headroom for the
+# workers to finish their current pass. Raise it together with config.shutdownDelay
+# and config.shutdownTimeout.
+terminationGracePeriodSeconds: 85
 
 autoscaling:
   # -- Requires object storage or a ReadWriteMany volume.

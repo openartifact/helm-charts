@@ -9,7 +9,7 @@ description: >-
   Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt and raw.
 type: application
-version: 0.10.1
+version: 0.10.2
 appVersion: "0.13.1"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
@@ -30,8 +30,8 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
-    - kind: changed
-      description: Default image OpenArtifact 0.13.1 (no migrations; the web UI offers package delete for apk and terraform and GPG keys for pacman and terraform repositories).
+    - kind: added
+      description: config.shutdownDelay (SERVER_SHUTDOWN_DELAY, default 10) keeps a terminating pod serving but not ready before it closes the listener, for graceful rolling updates; terminationGracePeriodSeconds is now 85 and the readiness probe is faster. Needs an OpenArtifact release newer than 0.13.1.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc

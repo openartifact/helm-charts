@@ -60,6 +60,7 @@
         "rateLimitRps": { "type": "integer", "minimum": 0 },
         "migrateOnStart": { "type": "boolean" },
         "shutdownTimeout": { "type": "integer", "minimum": 0 },
+        "shutdownDelay": { "type": "integer", "minimum": 0 },
         "projectsSelfCreate": { "type": "boolean" }
       }
     },
