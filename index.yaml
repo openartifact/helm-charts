@@ -3,6 +3,57 @@ entries:
   openartifact:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: config.shutdownDelay (SERVER_SHUTDOWN_DELAY, default 10) keeps a terminating pod serving but not ready before it closes the listener, for graceful rolling updates; terminationGracePeriodSeconds is now 85 and the readiness probe is faster. Needs OpenArtifact 0.13.2 or newer.
+        - kind: security
+          description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
+        - kind: changed
+          description: Default image OpenArtifact 0.13.2 (no migrations; /ready answers 503 during server.shutdownDelay; new openartifact_telemetry_log_records_dropped_total counter).
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.13.2
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.163.2
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.13.2
+    created: "2026-10-28T11:02:47.237999052Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda,
+      Conan, Ivy, sbt and raw.'
+    digest: 7b64bb5b0b2faa7ae079687c41bfd2be6100796d63eb10402849714af5972ca3
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.10.2/openartifact-0.10.2.tgz
+    version: 0.10.2
+  - annotations:
+      artifacthub.io/changes: |
         - kind: changed
           description: Default image OpenArtifact 0.13.1 (no migrations; the web UI offers package delete for apk and terraform and GPG keys for pacman and terraform repositories).
       artifacthub.io/images: |
@@ -793,4 +844,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-28T00:09:23.854823284Z"
+generated: "2026-10-28T11:02:47.238155865Z"
