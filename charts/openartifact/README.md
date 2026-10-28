@@ -44,6 +44,12 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.10.1 (OpenArtifact 0.13.1)
+
+- Image bump only: OpenArtifact 0.13.1 has no migrations and no new settings, so a rolling
+  upgrade from 0.13.0 works. See the
+  [upgrade notes](https://openartifact.github.io/v0.13/getting-started/upgrading.html#_0-13-1).
+
 ## Upgrading to 0.10.0 (OpenArtifact 0.13.0)
 
 - Migrations `087` to `090` are rolling-safe from OpenArtifact 0.12.x (chart 0.9.x): 0.12.x
