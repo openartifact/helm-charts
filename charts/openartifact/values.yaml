@@ -52,8 +52,8 @@ config:
   # -- Seconds the server keeps serving, with /ready answering 503, after SIGTERM and
   # before it closes the listener (SERVER_SHUTDOWN_DELAY). It covers the lag until the
   # Service and the ingress controller stop routing to the terminating pod; the image has
-  # no shell, so a preStop sleep is not possible. Needs an OpenArtifact release newer than
-  # 0.13.1: older images ignore it. 0 disables it. Count it in terminationGracePeriodSeconds.
+  # no shell, so a preStop sleep is not possible. Needs OpenArtifact 0.13.2 or newer:
+  # older images ignore it. 0 disables it. Count it in terminationGracePeriodSeconds.
   shutdownDelay: 10
   # -- Let any authenticated user create a project and become its owner
   # (OPENARTIFACT_PROJECTS_SELF_CREATE). false = only global admins create projects.

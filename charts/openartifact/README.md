@@ -50,8 +50,8 @@ waits up to `database.connectTimeout` (default `60s`) for the database at startu
   pod serving, not ready, before it closes the listener, which removes the occasional failed
   request during rolling updates. `terminationGracePeriodSeconds` goes from `75` to `85` and
   the readiness probe from `periodSeconds: 10, failureThreshold: 3` to `3` and `2`; if you
-  override these, add the delay to your grace period. The delay takes effect with an
-  OpenArtifact image newer than 0.13.1; with 0.13.1 the value is ignored.
+  override these, add the delay to your grace period. The delay takes effect with
+  OpenArtifact 0.13.2 or newer; older images ignore the value.
 
 ## Upgrading to 0.10.1 (OpenArtifact 0.13.1)
 
@@ -200,7 +200,7 @@ connections, so the Service and the ingress controller stop routing to the pod f
 (the image has no shell for a `preStop` sleep). The readiness probe fails within
 `periodSeconds * failureThreshold` (6 s), and `terminationGracePeriodSeconds` (default `85`)
 covers delay + `config.shutdownTimeout` + the drain. If you raise either value, raise the
-grace period too. This needs an OpenArtifact release newer than 0.13.1; older images ignore
+grace period too. This needs OpenArtifact 0.13.2 or newer; older images ignore
 `SERVER_SHUTDOWN_DELAY` and stop accepting connections at once.
 
 ## Vulnerability scanners

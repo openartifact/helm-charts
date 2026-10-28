@@ -10,7 +10,7 @@ description: >-
   sbt and raw.
 type: application
 version: 0.10.2
-appVersion: "0.13.1"
+appVersion: "0.13.2"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,13 +31,15 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: added
-      description: config.shutdownDelay (SERVER_SHUTDOWN_DELAY, default 10) keeps a terminating pod serving but not ready before it closes the listener, for graceful rolling updates; terminationGracePeriodSeconds is now 85 and the readiness probe is faster. Needs an OpenArtifact release newer than 0.13.1.
+      description: config.shutdownDelay (SERVER_SHUTDOWN_DELAY, default 10) keeps a terminating pod serving but not ready before it closes the listener, for graceful rolling updates; terminationGracePeriodSeconds is now 85 and the readiness probe is faster. Needs OpenArtifact 0.13.2 or newer.
+    - kind: changed
+      description: Default image OpenArtifact 0.13.2 (no migrations; /ready answers 503 during server.shutdownDelay; new openartifact_telemetry_log_records_dropped_total counter).
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.13.1
+      image: ghcr.io/openartifact/openartifact:0.13.2
       platforms:
         - linux/amd64
         - linux/arm64
