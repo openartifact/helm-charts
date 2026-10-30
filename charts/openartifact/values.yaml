@@ -19,16 +19,35 @@ image:
 imagePullSecrets: []
 
 # -- Number of replicas. More than one replica requires object storage
-# (storage.type != filesystem) or a ReadWriteMany volume.
+# (storage.type != filesystem) or a ReadWriteMany volume. With worker.enabled these are the
+# `web` replicas.
 replicaCount: 1
 revisionHistoryLimit: 5
+
+# Separate background workers (OpenArtifact 0.15 or newer). Off = one Deployment runs the whole
+# server (role `all`). On = the main Deployment runs role `web` (HTTP API, UI and formats, no
+# background workers) and a second Deployment `<fullname>-worker` runs role `worker` (metadata
+# regeneration, webhook delivery, scans, federation sync and the schedulers; it serves only
+# /health, /ready and /metrics). A `web` process hands that work to the workers through
+# PostgreSQL, so a split needs at least one worker replica. Both Deployments share the database,
+# the Secret and the blob storage: it needs object storage or ReadWriteMany volumes, as for
+# several replicas. AI analysis only runs in a process with role `all`.
+worker:
+  enabled: false
+  replicaCount: 1
+  # -- Resources of the worker pods. Empty = the same as `resources`.
+  resources: {}
+  # -- Strategy of the worker Deployment. Empty = RollingUpdate (maxSurge 1, maxUnavailable 0).
+  updateStrategy: {}
 
 # -- Deployment strategy. Empty = Recreate for filesystem storage on a
 # ReadWriteOnce volume (the volume cannot be attached twice), RollingUpdate otherwise.
 updateStrategy: {}
 
-# -- Public base URL (BASE_URL), e.g. https://artifacts.example.com.
-# Required for OIDC/SAML callbacks and correct download links behind a proxy.
+# -- Public base URL (BASE_URL), e.g. https://artifacts.example.com. Optional since OpenArtifact
+# 0.15: package-client URLs follow the request host (X-Forwarded-Host/Proto from a trusted proxy).
+# Still required for SSO (OIDC/SAML) callbacks, webhook links, SBOM ids and the Secure cookie
+# decision; the SAML entity ID and ACS URL derive from it, so do not change it afterwards.
 baseUrl: ""
 
 config:
@@ -40,8 +59,21 @@ config:
   sessionDurationHours: 24
   # -- Allowed CORS origins.
   corsOrigins: []
-  # -- CIDRs of reverse proxies whose X-Forwarded-For is trusted (usually the pod CIDR of your ingress controller).
+  # -- Process role (OPENARTIFACT_ROLE): all | web | worker. Leave it at `all` and use `worker.enabled`
+  # to split the roles; set it to web or worker only when you run the other role from another release.
+  role: all
+  # -- CIDRs of reverse proxies whose X-Forwarded-For and X-Forwarded-Host/Proto are trusted
+  # (OPENARTIFACT_TRUSTED_PROXIES), usually the pod CIDR of your ingress controller. Empty with
+  # ingress.enabled or httpRoute.enabled = ingress.trustedProxies. Without BASE_URL the client-visible
+  # URLs follow the forwarded host only when the peer is in this list.
   trustedProxies: []
+  # -- Seconds an idle keep-alive connection stays open (SERVER_IDLE_TIMEOUT, server default 120; 0 = no limit). null = server default.
+  idleTimeout: null
+  # -- Request header size cap in bytes (SERVER_MAX_HEADER_BYTES, 1024 to 16 MiB, server default 1 MiB). null = server default.
+  maxHeaderBytes: null
+  # -- Password hashes running at once (OPENARTIFACT_ARGON2_MAX_CONCURRENT); each holds 64 MiB.
+  # 0 = the CPU count clamped to 2..4. null = server default.
+  argon2MaxConcurrent: null
   # -- Allowed client CIDRs (empty = allow all).
   ipAllowlist: []
   # -- Requests per second per client IP (0 = disabled).
@@ -338,6 +370,36 @@ storage:
   type: filesystem
   # -- Filesystem path (filesystem backend).
   path: /var/lib/artifacts
+  # -- Directory where s3, azure and oci spool a blob to disk while verifying it (STORAGE_SPOOL_PATH).
+  # Empty = the system temp dir (/tmp, not swept). When set, it is mounted from the `spool` volume
+  # below and leftovers older than an hour are swept at startup.
+  spoolPath: ""
+  spool:
+    # -- Size limit of the emptyDir backing spoolPath; ignored with persistence.enabled.
+    sizeLimit: ""
+    persistence:
+      enabled: false
+      existingClaim: ""
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 20Gi
+      annotations: {}
+  # -- Persistent directory for server-relayed presigned uploads (STORAGE_STAGING_PATH). Required with
+  # storage.type=oci: it also holds the relay signing key, so it must survive restarts and be shared
+  # by all replicas (needs staging.persistence.enabled; more than one replica needs ReadWriteMany).
+  stagingPath: ""
+  staging:
+    # -- Size limit of the emptyDir backing stagingPath; ignored with persistence.enabled.
+    sizeLimit: ""
+    persistence:
+      enabled: false
+      existingClaim: ""
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 20Gi
+      annotations: {}
   # -- Bucket (s3, garage, seaweedfs).
   bucket: ""
   region: ""
@@ -400,6 +462,15 @@ gpg:
   # -- Secret holding the armored private key under `private.key` and, optionally,
   # the passphrase under `passphrase`.
   existingSecret: ""
+  # -- Who may choose the signing key when sealing a release bundle (GPG_BUNDLE_SIGNERS):
+  # `<key id or fingerprint>=<username>` entries. Without a grant only users with the global
+  # `manage` permission may.
+  bundleSigners: []
+
+federation:
+  # -- How far ahead of the local clock the stamp of a peer's change may be before it is set aside
+  # (OPENARTIFACT_FEDERATION_MAX_CLOCK_SKEW, Go duration, server default 5m).
+  maxClockSkew: ""
 
 metrics:
   # -- Expose /metrics, protected by METRICS_AUTH_TOKEN (generated when empty).
@@ -429,6 +500,16 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+  # -- Trusted reverse-proxy CIDRs used when config.trustedProxies is empty and the chart exposes
+  # the server through an Ingress or an HTTPRoute: the private ranges, which cover the pod CIDR of
+  # any in-cluster ingress controller. The server then honours the controller's X-Forwarded-For,
+  # X-Forwarded-Host and X-Forwarded-Proto (client IPs, rate limits, URLs, `Secure` cookies).
+  # Narrow it to your controller's pod CIDR, or set [] to trust no proxy.
+  trustedProxies:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - fc00::/7
 
 # -- Gateway API HTTPRoute (gateway.networking.k8s.io/v1).
 httpRoute:

@@ -3,23 +3,44 @@ SPDX-FileCopyrightText: The OpenArtifact Authors
 SPDX-License-Identifier: AGPL-3.0-or-later
 */ -}}
 {{- include "openartifact.validate" . }}
+{{- include "openartifact.deployment" (dict "root" . "worker" false) }}
+{{- if .Values.worker.enabled }}
+---
+{{ include "openartifact.deployment" (dict "root" . "worker" true) }}
+{{- end }}
+{{- /*
+One Deployment per process role. Without worker.enabled a single Deployment runs the role
+config.role (default all). With it, this one runs `web` (Service, ingress, HPA) and a second,
+`<fullname>-worker`, runs `worker` (background workers, no Service route of its own).
+*/}}
+{{- define "openartifact.deployment" -}}
+{{- $root := .root }}
+{{- $worker := .worker }}
+{{- with $root }}
 {{- $fullname := include "openartifact.fullname" . }}
+{{- $name := ternary (printf "%s-worker" $fullname) $fullname $worker }}
+{{- $selector := ternary (include "openartifact.workerSelectorLabels" .) (include "openartifact.selectorLabels" .) $worker }}
 {{- $fs := include "openartifact.filesystemStorage" . }}
 {{- $storageCreds := include "openartifact.storageCredentials" . | fromYaml }}
 {{- $collector := .Values.telemetry.collector }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $fullname }}
+  name: {{ $name }}
   labels:
     {{- include "openartifact.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ ternary "worker" "web" $worker }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if $worker }}
+  replicas: {{ .Values.worker.replicaCount }}
+  {{- else if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   strategy:
-    {{- if .Values.updateStrategy }}
+    {{- if and $worker .Values.worker.updateStrategy }}
+    {{- toYaml .Values.worker.updateStrategy | nindent 4 }}
+    {{- else if and (not $worker) .Values.updateStrategy }}
     {{- toYaml .Values.updateStrategy | nindent 4 }}
     {{- else if include "openartifact.singleWriterVolume" . }}
     type: Recreate
@@ -31,7 +52,7 @@ spec:
     {{- end }}
   selector:
     matchLabels:
-      {{- include "openartifact.selectorLabels" . | nindent 6 }}
+      {{- $selector | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -43,7 +64,13 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
+        {{- /* Worker pods carry their own name label so the Service selector never matches them. */}}
+        {{- if $worker }}
+        {{- include "openartifact.workerLabels" . | nindent 8 }}
+        {{- else }}
         {{- include "openartifact.labels" . | nindent 8 }}
+        {{- end }}
+        app.kubernetes.io/component: {{ ternary "worker" "web" $worker }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -139,6 +166,8 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           env:
+            - name: OPENARTIFACT_ROLE
+              value: {{ include "openartifact.role" (dict "root" . "worker" $worker) | quote }}
             - name: SERVER_HOST
               value: "0.0.0.0"
             - name: SERVER_PORT
@@ -147,6 +176,22 @@ spec:
               value: {{ .Values.config.shutdownTimeout | quote }}
             - name: SERVER_SHUTDOWN_DELAY
               value: {{ .Values.config.shutdownDelay | quote }}
+            {{- if not (kindIs "invalid" .Values.config.idleTimeout) }}
+            - name: SERVER_IDLE_TIMEOUT
+              value: {{ .Values.config.idleTimeout | int64 | quote }}
+            {{- end }}
+            {{- if not (kindIs "invalid" .Values.config.maxHeaderBytes) }}
+            - name: SERVER_MAX_HEADER_BYTES
+              value: {{ .Values.config.maxHeaderBytes | int64 | quote }}
+            {{- end }}
+            {{- if not (kindIs "invalid" .Values.config.argon2MaxConcurrent) }}
+            - name: OPENARTIFACT_ARGON2_MAX_CONCURRENT
+              value: {{ .Values.config.argon2MaxConcurrent | int64 | quote }}
+            {{- end }}
+            {{- with .Values.federation.maxClockSkew }}
+            - name: OPENARTIFACT_FEDERATION_MAX_CLOCK_SKEW
+              value: {{ . | quote }}
+            {{- end }}
             - name: DB_CONNECT_TIMEOUT
               value: {{ ternary .Values.database.connectTimeout "0s" .Values.database.waitForDatabase | quote }}
             {{- with .Values.baseUrl }}
@@ -169,7 +214,7 @@ spec:
             - name: CORS_ORIGINS
               value: {{ join "," . | quote }}
             {{- end }}
-            {{- with .Values.config.trustedProxies }}
+            {{- with include "openartifact.trustedProxies" . | fromYamlArray }}
             - name: OPENARTIFACT_TRUSTED_PROXIES
               value: {{ join "," . | quote }}
             {{- end }}
@@ -223,7 +268,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ . }}
-                  key: {{ $.Values.database.external.existingSecretPasswordKey }}
+                  key: {{ $root.Values.database.external.existingSecretPasswordKey }}
             {{- end }}
             {{- end }}
             # Storage
@@ -263,6 +308,14 @@ spec:
             {{- end }}
             {{- with .Values.storage.azure.containerName }}
             - name: OPENARTIFACT_AZURE_CONTAINER_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.spoolPath }}
+            - name: STORAGE_SPOOL_PATH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.storage.stagingPath }}
+            - name: STORAGE_STAGING_PATH
               value: {{ . | quote }}
             {{- end }}
             {{- if .Values.storage.oci.insecure }}
@@ -427,7 +480,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ . }}
-                  key: {{ $.Values.telemetry.otlp.headersSecretKey }}
+                  key: {{ $root.Values.telemetry.otlp.headersSecretKey }}
             {{- end }}
             {{- end }}
             {{- end }}
@@ -439,6 +492,10 @@ spec:
             # GPG
             - name: GPG_ENABLED
               value: {{ .Values.gpg.enabled | quote }}
+            {{- with .Values.gpg.bundleSigners }}
+            - name: GPG_BUNDLE_SIGNERS
+              value: {{ join "," . | quote }}
+            {{- end }}
             {{- if .Values.gpg.enabled }}
             - name: GPG_KEY_PATH
               value: /etc/openartifact/gpg/private.key
@@ -486,7 +543,7 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml (ternary (default .Values.resources .Values.worker.resources) .Values.resources $worker) | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
@@ -496,6 +553,14 @@ spec:
             {{- end }}
             - name: scanner-cache
               mountPath: {{ .Values.scanners.cache.path }}
+            {{- if .Values.storage.spoolPath }}
+            - name: spool
+              mountPath: {{ .Values.storage.spoolPath }}
+            {{- end }}
+            {{- if .Values.storage.stagingPath }}
+            - name: staging
+              mountPath: {{ .Values.storage.stagingPath }}
+            {{- end }}
             {{- if $fs }}
             - name: data
               mountPath: {{ .Values.storage.path }}
@@ -535,6 +600,34 @@ spec:
           {{- else }}
           emptyDir:
             {{- with .Values.dockerUploads.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }}
+            {}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.storage.spoolPath }}
+        - name: spool
+          {{- if .Values.storage.spool.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.spool.persistence.existingClaim | default (printf "%s-spool" $fullname) }}
+          {{- else }}
+          emptyDir:
+            {{- with .Values.storage.spool.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }}
+            {}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.storage.stagingPath }}
+        - name: staging
+          {{- if .Values.storage.staging.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.staging.persistence.existingClaim | default (printf "%s-staging" $fullname) }}
+          {{- else }}
+          emptyDir:
+            {{- with .Values.storage.staging.sizeLimit }}
             sizeLimit: {{ . }}
             {{- else }}
             {}
@@ -621,7 +714,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
                 labelSelector:
                   matchLabels:
-                    {{- include "openartifact.selectorLabels" . | nindent 20 }}
+                    {{- $selector | nindent 20 }}
         {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
@@ -631,3 +724,5 @@ spec:
       topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
+{{- end }}

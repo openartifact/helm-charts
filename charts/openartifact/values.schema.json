@@ -61,7 +61,28 @@
         "migrateOnStart": { "type": "boolean" },
         "shutdownTimeout": { "type": "integer", "minimum": 0 },
         "shutdownDelay": { "type": "integer", "minimum": 0 },
-        "projectsSelfCreate": { "type": "boolean" }
+        "projectsSelfCreate": { "type": "boolean" },
+        "role": { "enum": ["all", "web", "worker"] },
+        "idleTimeout": { "type": ["integer", "null"], "minimum": 0 },
+        "maxHeaderBytes": { "type": ["integer", "null"], "minimum": 0, "maximum": 16777216 },
+        "argon2MaxConcurrent": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "resources": { "type": "object" },
+        "updateStrategy": { "type": "object" }
+      }
+    },
+    "federation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxClockSkew": { "type": "string", "pattern": "^(|[0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h)([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*)$" }
       }
     },
     "env": { "$ref": "#/definitions/stringMap" },
@@ -152,6 +173,24 @@
       "properties": {
         "type": { "enum": ["filesystem", "s3", "garage", "seaweedfs", "gcs", "azure", "oci"] },
         "path": { "type": "string", "pattern": "^/" },
+        "spoolPath": { "type": "string", "pattern": "^(|/.+)$" },
+        "spool": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sizeLimit": { "type": "string" },
+            "persistence": { "$ref": "#/definitions/volume" }
+          }
+        },
+        "stagingPath": { "type": "string", "pattern": "^(|/.+)$" },
+        "staging": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sizeLimit": { "type": "string" },
+            "persistence": { "$ref": "#/definitions/volume" }
+          }
+        },
         "bucket": { "type": "string" },
         "region": { "type": "string" },
         "endpoint": { "type": "string" },
@@ -206,7 +245,8 @@
       "additionalProperties": false,
       "properties": {
         "enabled": { "type": "boolean" },
-        "existingSecret": { "type": "string" }
+        "existingSecret": { "type": "string" },
+        "bundleSigners": { "type": "array", "items": { "type": "string", "pattern": "^[^=,]+=[^=,]+$" } }
       }
     },
     "metrics": {
@@ -264,7 +304,8 @@
             }
           }
         },
-        "tls": { "type": "array" }
+        "tls": { "type": "array" },
+        "trustedProxies": { "type": "array", "items": { "type": "string" } }
       }
     },
     "httpRoute": {

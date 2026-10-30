@@ -44,6 +44,52 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.12.0 (OpenArtifact 0.15.0)
+
+**Breaking: 0.15 cannot be upgraded in place.** The package tables were replaced and the
+99 migrations of 0.x were squashed into one baseline; a 0.15 pod started on a 0.14 database
+refuses to start (`database predates the 0.15 schema baseline`). Backups and recovery sidecars
+written by 0.14 are refused, and federation protocol 2 refuses 0.14 peers. Either:
+
+- **Fresh database** (nothing to keep): drop and recreate the database, empty the blob store
+  (the content is addressed by SHA-256 and tied to the old rows; old recovery sidecars would be
+  refused), then `helm upgrade`. The release rolls the pods onto the empty database and runs
+  migrations `001` to `003` (the indexes of `002`/`003` are built `CONCURRENTLY`).
+- **Keep the data**: install 0.15 beside 0.14 with its own empty database and copy the content and
+  configuration with `oa import openartifact` and `oa import config openartifact`; see the
+  [migration runbook](https://openartifact.github.io/migration/openartifact.html).
+
+Also new in 0.15, all handled by this chart version:
+
+- **Secrets.** `OPENARTIFACT_SECRET_KEY` and `AUTH_HMAC_KEY` are mandatory (the attestation key
+  needs the secret key). The chart-managed Secret generates both once and keeps them through
+  `lookup`. With `secrets.existingSecret` the Secret must hold both keys: the render fails when
+  it can read the live Secret and a key is missing (`lookup` is empty under `helm template` and
+  Argo CD, where this check cannot run; the pods then fail at start instead).
+- **Environment values are strict.** An unparsable integer, boolean or duration now fails startup.
+- **Roles.** `worker.enabled=true` runs a `web` Deployment (Service, ingress, HPA) and a `worker`
+  Deployment (`<fullname>-worker`: background workers, `/health`, `/ready`, `/metrics` only; a
+  scrape Service of the same name when `metrics.enabled`). A `web` process needs a worker, so the
+  chart never renders `web` alone. Both share the database and the blob storage: use object
+  storage or ReadWriteMany volumes. AI analysis only runs on `all` processes. The default is one
+  Deployment with role `all` (`config.role`).
+- **Trusted proxies.** Client IPs, forwarded URLs and the CSRF and `Secure`-cookie decisions behind
+  an ingress depend on `OPENARTIFACT_TRUSTED_PROXIES`. With an Ingress or HTTPRoute and an empty
+  `config.trustedProxies` the chart sets it from `ingress.trustedProxies` (the private ranges);
+  narrow it to your controller's pod CIDR. Browser sessions must send `X-CSRF-Token` on every
+  write (the web UI does); package clients with tokens are unaffected.
+- **`baseUrl` is optional** (package-client URLs follow the request host), but SSO callbacks, the
+  SAML entity ID and webhook links still derive from it.
+- **Storage.** `storage.spoolPath` (spool for s3/azure/oci verification) and `storage.stagingPath`
+  (OCI upload relay; mandatory and persistent with `storage.type=oci`) are mounted from the
+  `storage.spool` / `storage.staging` volumes (emptyDir, or a PVC with `persistence.enabled`).
+- **New settings:** `config.idleTimeout`, `config.maxHeaderBytes`, `config.argon2MaxConcurrent`,
+  `gpg.bundleSigners` (a CI job that sealed a bundle with a chosen key needs a grant) and
+  `federation.maxClockSkew`.
+- The probes are unchanged (`/health` startup and liveness, `/ready` readiness; the worker serves
+  them too). The server's own `-healthcheck` flag now verifies TLS against the server certificate;
+  the chart does not use it.
+
 ## Upgrading to 0.11.0 (OpenArtifact 0.14.0)
 
 - The upgrade from 0.10.x is plain: no values change is required. OpenArtifact 0.14.0 runs
@@ -193,7 +239,13 @@ waits up to `database.connectTimeout` (default `60s`) for the database at startu
 | `s3`, `garage`, `seaweedfs` | `storage.bucket`, `storage.region`, `storage.endpoint` for non-AWS | `accessKey`/`secretKey`, or the AWS credential chain (IRSA, Pod Identity) |
 | `gcs` | `storage.gcs.bucket` | `gcsHmacKey`/`gcsHmacSecret` |
 | `azure` | `storage.azure.accountName`, `.containerName` | `azureAccountKey` |
-| `oci` | `storage.endpoint` | `ociUsername`/`ociPassword` |
+| `oci` | `storage.endpoint`, `storage.stagingPath` + `storage.staging.persistence.enabled` | `ociUsername`/`ociPassword` |
+
+`s3`, `azure` and `oci` spool every blob to disk while verifying it: `storage.spoolPath` points that
+at a dedicated volume (`storage.spool.sizeLimit` or `storage.spool.persistence`) instead of `/tmp`.
+With `oci`, `storage.stagingPath` is mandatory and must be persistent (`storage.staging.persistence`),
+because relayed uploads and the relay signing key live there; with several replicas it needs
+`ReadWriteMany`.
 
 `storage.credentials.existingSecret` is loaded with `envFrom`; its keys are the
 environment variable names (`STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, …).
@@ -204,6 +256,11 @@ More than one replica (`replicaCount > 1` or `autoscaling.enabled`) needs storag
 pod can mount: an object storage backend, or `persistence.accessModes: [ReadWriteMany]`.
 The chart refuses to render otherwise. With a single `ReadWriteOnce` volume the
 Deployment uses the `Recreate` strategy, so upgrades have a short downtime.
+
+`worker.enabled=true` splits the server into a `web` and a `worker` Deployment (see
+[Upgrading to 0.12.0](#upgrading-to-0120-openartifact-0150)); both need storage every pod can
+mount, so the same rule applies. `replicaCount` and `autoscaling` then size the `web` side,
+`worker.replicaCount` the workers.
 
 Rolling updates are graceful: on SIGTERM the server answers `503` on `/ready` and keeps
 serving for `config.shutdownDelay` seconds (default `10`) before it stops accepting
@@ -321,9 +378,10 @@ on first install and reused on upgrade. The Secret is kept on `helm uninstall`
 (`secrets.keepOnUninstall`); **back it up**, because losing `OPENARTIFACT_SECRET_KEY`
 makes stored credentials unreadable.
 
-Generation relies on Helm's `lookup`, which does not run under `helm template`. For
-GitOps tools that render with `helm template` (Argo CD), create the Secret yourself and
-set `secrets.existingSecret`. It is loaded with `envFrom`, so it can also carry
+OpenArtifact 0.15 requires both keys. Generation relies on Helm's `lookup`, which does not run
+under `helm template`. For GitOps tools that render with `helm template` (Argo CD), create the
+Secret yourself and set `secrets.existingSecret`; the chart fails the render when it can read
+that Secret and `AUTH_HMAC_KEY` or `OPENARTIFACT_SECRET_KEY` is missing. It is loaded with `envFrom`, so it can also carry
 `DB_PASSWORD`, `API_KEY`, `METRICS_AUTH_TOKEN`, `AI_API_KEY`,
 `OPENARTIFACT_SAML_SP_CERT`/`_KEY` and any other sensitive setting.
 
@@ -377,8 +435,10 @@ Notes:
   large: raise the controller's body size limit (e.g.
   `nginx.ingress.kubernetes.io/proxy-body-size: "0"`).
 - `httpRoute.*` creates a Gateway API `HTTPRoute`.
-- Set `baseUrl` to the public URL and `config.trustedProxies` to the CIDR of your
-  ingress controller so client IPs and SSO callbacks are correct.
+- Set `baseUrl` to the public URL (needed for SSO callbacks; package URLs otherwise follow the
+  request host) and `config.trustedProxies` to the CIDR of your ingress controller. When
+  `config.trustedProxies` is empty and an Ingress or HTTPRoute is enabled, the chart falls back to
+  `ingress.trustedProxies`, the private ranges (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`).
 
 ## Other settings
 

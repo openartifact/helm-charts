@@ -15,6 +15,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 {{- if and .Values.scanners.cache.persistence.enabled (not .Values.scanners.cache.persistence.existingClaim) }}
 {{- $claims = append $claims (dict "suffix" "scanner-cache" "p" .Values.scanners.cache.persistence) }}
 {{- end }}
+{{- if and .Values.storage.spoolPath .Values.storage.spool.persistence.enabled (not .Values.storage.spool.persistence.existingClaim) }}
+{{- $claims = append $claims (dict "suffix" "spool" "p" .Values.storage.spool.persistence) }}
+{{- end }}
+{{- if and .Values.storage.stagingPath .Values.storage.staging.persistence.enabled (not .Values.storage.staging.persistence.existingClaim) }}
+{{- $claims = append $claims (dict "suffix" "staging" "p" .Values.storage.staging.persistence) }}
+{{- end }}
 {{- range $claims }}
 ---
 apiVersion: v1

@@ -11,8 +11,20 @@ metadata:
     {{- include "openartifact.labels" . | nindent 4 }}
 spec:
   podSelector:
+    {{- if .Values.worker.enabled }}
+    {{- /* Web and worker pods differ only in the name label. */}}
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - {{ include "openartifact.name" . }}
+          - {{ include "openartifact.name" . }}-worker
+    {{- else }}
     matchLabels:
       {{- include "openartifact.selectorLabels" . | nindent 6 }}
+    {{- end }}
   policyTypes:
     - Ingress
     {{- if .Values.networkPolicy.egress.enabled }}
