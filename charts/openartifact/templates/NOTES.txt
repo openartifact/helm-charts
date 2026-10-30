@@ -26,8 +26,17 @@ Set bootstrap.createSecret=true or bootstrap.existingSecret to choose it instead
 {{- end }}
 {{- if not .Values.baseUrl }}
 
-WARNING: baseUrl is not set. Set it to the public URL so OIDC/SAML callbacks and
-generated links are correct.
+NOTE: baseUrl is not set. Package-client URLs follow the request host, but OIDC/SAML
+callbacks and webhook links need the public URL in baseUrl.
+{{- end }}
+{{- if .Values.worker.enabled }}
+
+Roles are split: {{ include "openartifact.fullname" . }} runs `web` and {{ include "openartifact.fullname" . }}-worker runs `worker`.
+{{- end }}
+{{- if and (not .Values.config.trustedProxies) (or .Values.ingress.enabled .Values.httpRoute.enabled) }}
+
+Trusted proxies default to ingress.trustedProxies ({{ join ", " .Values.ingress.trustedProxies }}); narrow them to your
+ingress controller's pod CIDR.
 {{- end }}
 {{- if and (include "openartifact.filesystemStorage" .) (not .Values.persistence.enabled) }}
 

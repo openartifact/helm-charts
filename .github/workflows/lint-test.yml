@@ -84,6 +84,26 @@ jobs:
           fi
           helm template t charts/openartifact --set database.external.host=pg --set bootstrap.existingSecret=x --set bootstrap.adminToken.enabled=true |
             grep -q OPENARTIFACT_BOOTSTRAP_ADMIN_TOKEN_FILE
+          # OpenArtifact 0.15 roles: the default is one Deployment with role all; worker.enabled
+          # adds a worker Deployment (object storage, as for several replicas).
+          helm template t charts/openartifact --set database.external.host=pg | grep -q 'value: "all"'
+          split=$(helm template t charts/openartifact --set database.external.host=pg --set worker.enabled=true --set storage.type=s3 --set storage.bucket=b)
+          grep -q 'value: "web"' <<<"$split"
+          grep -q 'value: "worker"' <<<"$split"
+          if helm template t charts/openartifact --set database.external.host=pg --set worker.enabled=true >/dev/null 2>&1; then
+            echo "expected render failure for worker.enabled on ReadWriteOnce filesystem storage" >&2
+            exit 1
+          fi
+          # The OCI relay needs a persistent staging directory.
+          if helm template t charts/openartifact --set database.external.host=pg --set storage.type=oci >/dev/null 2>&1; then
+            echo "expected render failure for storage.type=oci without storage.stagingPath" >&2
+            exit 1
+          fi
+          helm template t charts/openartifact --set database.external.host=pg --set storage.type=oci --set storage.stagingPath=/var/lib/staging --set storage.staging.persistence.enabled=true |
+            grep -q STORAGE_STAGING_PATH
+          # Behind an Ingress the trusted proxies default to ingress.trustedProxies.
+          helm template t charts/openartifact --set database.external.host=pg --set ingress.enabled=true |
+            grep -q OPENARTIFACT_TRUSTED_PROXIES
 
       - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         if: steps.list-changed.outputs.changed == 'true'

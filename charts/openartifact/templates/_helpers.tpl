@@ -37,6 +37,39 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: openartifact
 {{- end }}
 
+{{- /* Pods of the worker Deployment: a name label of their own keeps them out of the Service selector. */}}
+{{- define "openartifact.workerSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "openartifact.name" . }}-worker
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{- define "openartifact.workerLabels" -}}
+helm.sh/chart: {{ include "openartifact.chart" . }}
+{{ include "openartifact.workerSelectorLabels" . }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: openartifact
+{{- end }}
+
+{{/* OPENARTIFACT_ROLE of a Deployment: web/worker when the roles are split, else config.role. */}}
+{{- define "openartifact.role" -}}
+{{- if .root.Values.worker.enabled }}{{ ternary "worker" "web" .worker }}{{ else }}{{ .root.Values.config.role }}{{ end }}
+{{- end }}
+
+{{/*
+CIDRs whose X-Forwarded-* headers are trusted, as a YAML list: config.trustedProxies, else (when
+the chart exposes the server through an Ingress or an HTTPRoute) ingress.trustedProxies.
+*/}}
+{{- define "openartifact.trustedProxies" -}}
+{{- if .Values.config.trustedProxies }}
+{{- toYaml .Values.config.trustedProxies }}
+{{- else if or .Values.ingress.enabled .Values.httpRoute.enabled }}
+{{- toYaml .Values.ingress.trustedProxies }}
+{{- else }}
+{{- "[]" }}
+{{- end }}
+{{- end }}
+
 {{- define "openartifact.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
 {{- default (include "openartifact.fullname" .) .Values.serviceAccount.name }}
@@ -200,6 +233,8 @@ service:
 {{- else if and .Values.backups.persistence.enabled (not (has "ReadWriteMany" .Values.backups.persistence.accessModes)) }}true
 {{- else if and .Values.scanners.cache.persistence.enabled (not (has "ReadWriteMany" .Values.scanners.cache.persistence.accessModes)) }}true
 {{- else if and .Values.dockerUploads.dir .Values.dockerUploads.persistence.enabled (not (has "ReadWriteMany" .Values.dockerUploads.persistence.accessModes)) }}true
+{{- else if and .Values.storage.spoolPath .Values.storage.spool.persistence.enabled (not (has "ReadWriteMany" .Values.storage.spool.persistence.accessModes)) }}true
+{{- else if and .Values.storage.stagingPath .Values.storage.staging.persistence.enabled (not (has "ReadWriteMany" .Values.storage.staging.persistence.accessModes)) }}true
 {{- end }}
 {{- end }}
 
@@ -222,12 +257,48 @@ URL endpoint: its port, else 443 for https:// and 80 for http://. host[:port]: i
 {{- end }}
 
 {{- define "openartifact.validate" -}}
-{{- $multi := or .Values.autoscaling.enabled (gt (int .Values.replicaCount) 1) }}
+{{- $multi := or .Values.autoscaling.enabled .Values.worker.enabled (gt (int .Values.replicaCount) 1) }}
 {{- if and $multi (include "openartifact.filesystemStorage" .) (not .Values.persistence.enabled) }}
 {{- fail "filesystem storage with more than one replica needs persistence.enabled=true and a ReadWriteMany volume, or an object storage backend" }}
 {{- end }}
 {{- if and $multi (include "openartifact.singleWriterVolume" .) }}
-{{- fail "more than one replica needs ReadWriteMany in the accessModes of every enabled persistence volume (persistence, backups.persistence, scanners.cache.persistence, dockerUploads.persistence), or an object storage backend (and emptyDir for the others)" }}
+{{- fail "more than one pod (replicas, or worker.enabled) needs ReadWriteMany in the accessModes of every enabled persistence volume (persistence, backups.persistence, scanners.cache.persistence, dockerUploads.persistence, storage.spool.persistence, storage.staging.persistence), or an object storage backend (and emptyDir for the others)" }}
+{{- end }}
+{{- if not (has .Values.config.role (list "all" "web" "worker")) }}
+{{- fail "config.role must be all, web or worker" }}
+{{- end }}
+{{- if and .Values.worker.enabled (ne .Values.config.role "all") }}
+{{- fail "worker.enabled runs the web and worker Deployments itself: leave config.role at all" }}
+{{- end }}
+{{- if and .Values.config.trustedProxies (not (kindIs "slice" .Values.config.trustedProxies)) }}
+{{- fail "config.trustedProxies must be a list of CIDRs" }}
+{{- end }}
+{{- /* OpenArtifact 0.15 needs both keys. The chart-managed Secret always generates them; an existing Secret is checked when it can be read (lookup is empty under helm template and Argo CD). */}}
+{{- if .Values.secrets.existingSecret }}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace .Values.secrets.existingSecret }}
+{{- if $existing }}
+{{- $keys := $existing.data | default dict }}
+{{- range $k := list "AUTH_HMAC_KEY" "OPENARTIFACT_SECRET_KEY" }}
+{{- if not (hasKey $keys $k) }}
+{{- fail (printf "secrets.existingSecret %q has no %s key: OpenArtifact 0.15 needs AUTH_HMAC_KEY and OPENARTIFACT_SECRET_KEY (generate each with `openssl rand -hex 32` and keep them stable)" $.Values.secrets.existingSecret $k) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if and .Values.secrets.encryptionKey (lt (len .Values.secrets.encryptionKey) 16) }}
+{{- fail "secrets.encryptionKey must be at least 16 bytes" }}
+{{- end }}
+{{- if and (eq .Values.storage.type "oci") (not .Values.storage.stagingPath) }}
+{{- fail "storage.type=oci requires storage.stagingPath (a persistent directory for relayed uploads and the relay signing key)" }}
+{{- end }}
+{{- if and (eq .Values.storage.type "oci") (not .Values.storage.staging.persistence.enabled) }}
+{{- fail "storage.type=oci requires storage.staging.persistence.enabled=true: the staging directory holds the relay signing key and must survive restarts and be shared by replicas" }}
+{{- end }}
+{{- if and .Values.storage.staging.persistence.enabled (not .Values.storage.stagingPath) }}
+{{- fail "storage.staging.persistence.enabled requires storage.stagingPath" }}
+{{- end }}
+{{- if and .Values.storage.spool.persistence.enabled (not .Values.storage.spoolPath) }}
+{{- fail "storage.spool.persistence.enabled requires storage.spoolPath" }}
 {{- end }}
 {{- if and .Values.secrets.existingSecret .Values.database.external.password (not .Values.cnpg.enabled) }}
 {{- fail "database.external.password is stored in the chart-managed Secret; with secrets.existingSecret put DB_PASSWORD there or use database.external.existingSecret" }}
