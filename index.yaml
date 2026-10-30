@@ -4,6 +4,65 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Default image OpenArtifact 0.15.0. BREAKING, no in-place upgrade from 0.14 - the database schema was squashed into one baseline and a 0.15 server refuses a 0.14 database (ErrLegacySchema). Install into an empty database (or move the data with `oa import openartifact`), see the chart README. Needs a fresh database, 0.14 backups and recovery sidecars are refused.
+        - kind: added
+          description: worker.enabled splits the roles into two Deployments (OPENARTIFACT_ROLE web and worker, with a scrape Service for the workers); the default stays one Deployment with role all (config.role).
+        - kind: added
+          description: storage.spoolPath and storage.stagingPath (STORAGE_SPOOL_PATH, STORAGE_STAGING_PATH) with spool and staging volumes (emptyDir or PVC); storage.type=oci now requires a persistent stagingPath.
+        - kind: added
+          description: config.idleTimeout, config.maxHeaderBytes, config.argon2MaxConcurrent, gpg.bundleSigners and federation.maxClockSkew pass the new 0.15 settings.
+        - kind: changed
+          description: With ingress.enabled or httpRoute.enabled and an empty config.trustedProxies the chart now sets OPENARTIFACT_TRUSTED_PROXIES to ingress.trustedProxies (the private ranges), so client IPs, forwarded URLs and the CSRF/Secure-cookie decisions work behind the controller. Set ingress.trustedProxies to your controller's CIDR, or [] to trust no proxy.
+        - kind: changed
+          description: OPENARTIFACT_SECRET_KEY and AUTH_HMAC_KEY are required by 0.15. The chart-managed Secret generates both once (kept through lookup); with secrets.existingSecret the render fails when the live Secret lacks either key. baseUrl is optional but still needed for SSO.
+        - kind: security
+          description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.15.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.163.2
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.15.0
+    created: "2026-10-30T01:06:52.180780449Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda,
+      Conan, Ivy, sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.'
+    digest: 67303da64ceb6818d661ebd517bf96f425e46bf23513e948dfb1d6a2f848b2d0
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.12.0/openartifact-0.12.0.tgz
+    version: 0.12.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Default image OpenArtifact 0.14.0 - Nix binary caches, Ansible collections, a local OSV mirror, CISA KEV and EPSS signals on findings and application logs over OTLP. Migrations 091-095 run at startup and are rolling-safe from 0.13.2; upgrade from 0.12.x through 0.13.x first (091 drops storage_backends.is_default).
         - kind: added
           description: config.shutdownDelay (SERVER_SHUTDOWN_DELAY, default 10) keeps a terminating pod serving but not ready before it closes the listener, for graceful rolling updates; terminationGracePeriodSeconds is now 85 and the readiness probe is faster. Needs OpenArtifact 0.13.2 or newer.
@@ -895,4 +954,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-28T17:41:50.568837366Z"
+generated: "2026-10-30T01:06:52.180932873Z"
