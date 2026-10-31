@@ -4,6 +4,55 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Default image OpenArtifact 0.15.1 (no migrations, replaces 0.15.0 in place). Fixes the 500 of the grouped package listing on docker repositories, cleanup policies with a huge keep_since_days and GET /api/v1/users with a huge page.
+        - kind: security
+          description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.15.1
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.163.2
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.15.1
+    created: "2026-10-31T15:29:11.583537011Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda,
+      Conan, Ivy, sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.'
+    digest: b80abb81a5d1ab0f19320b49289d8f3a2e43c81ea3cc37b0894addc0cfefec4c
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.12.1/openartifact-0.12.1.tgz
+    version: 0.12.1
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Default image OpenArtifact 0.15.0. BREAKING, no in-place upgrade from 0.14 - the database schema was squashed into one baseline and a 0.15 server refuses a 0.14 database (ErrLegacySchema). Install into an empty database (or move the data with `oa import openartifact`), see the chart README. Needs a fresh database, 0.14 backups and recovery sidecars are refused.
         - kind: added
           description: worker.enabled splits the roles into two Deployments (OPENARTIFACT_ROLE web and worker, with a scrape Service for the workers); the default stays one Deployment with role all (config.role).
@@ -954,4 +1003,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-30T01:06:52.180932873Z"
+generated: "2026-10-31T15:29:11.583706837Z"
