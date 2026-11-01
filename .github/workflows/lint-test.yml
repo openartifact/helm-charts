@@ -104,6 +104,10 @@ jobs:
           # Behind an Ingress the trusted proxies default to ingress.trustedProxies.
           helm template t charts/openartifact --set database.external.host=pg --set ingress.enabled=true |
             grep -q OPENARTIFACT_TRUSTED_PROXIES
+          # The helm test Pod must stay outside the NetworkPolicy and Service selectors: with
+          # egress restricted the policy would drop its request to the Service.
+          helm template t charts/openartifact --set database.external.host=pg --show-only templates/tests/test-connection.yaml |
+            grep -q 'app.kubernetes.io/name: openartifact-test$'
 
       - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         if: steps.list-changed.outputs.changed == 'true'
