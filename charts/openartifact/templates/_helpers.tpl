@@ -51,6 +51,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: openartifact
 {{- end }}
 
+{{- /* The helm test Pod: a name label of its own keeps it out of the NetworkPolicy (its egress rules would drop the request to the Service) and out of the Service selector. */}}
+{{- define "openartifact.testLabels" -}}
+helm.sh/chart: {{ include "openartifact.chart" . }}
+app.kubernetes.io/name: {{ include "openartifact.name" . }}-test
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: openartifact
+app.kubernetes.io/component: test
+{{- end }}
+
 {{/* OPENARTIFACT_ROLE of a Deployment: web/worker when the roles are split, else config.role. */}}
 {{- define "openartifact.role" -}}
 {{- if .root.Values.worker.enabled }}{{ ternary "worker" "web" .worker }}{{ else }}{{ .root.Values.config.role }}{{ end }}

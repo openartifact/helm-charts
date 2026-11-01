@@ -467,4 +467,7 @@ Notes:
 | startup / liveness | `/health` | Process is serving (always 200, reports degraded components) |
 | readiness | `/ready` | Database and object storage are reachable |
 
-`helm test <release>` calls `/ready` through the Service.
+`helm test <release>` calls `/ready` through the Service. The test Pod has its own
+`app.kubernetes.io/name` label, so neither the Service nor the NetworkPolicy selects it. With
+`networkPolicy.from` set, add a peer matching `app.kubernetes.io/component: test` (in the
+release namespace) or the test cannot reach the server.
