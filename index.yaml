@@ -3,6 +3,55 @@ entries:
   openartifact:
   - annotations:
       artifacthub.io/changes: |
+        - kind: fixed
+          description: The helm test Pod no longer carries the NetworkPolicy and Service selector labels (it gets an app.kubernetes.io/name of its own). With networkPolicy.egress.enabled the policy selected the Pod and dropped its request to the Service, so helm test hung until the connect timeout or passed only by timing, before the CNI enforced the policy for the new Pod. OpenArtifact stays at 0.16.0.
+        - kind: security
+          description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.16.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.163.2
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.16.0
+    created: "2026-11-01T01:43:38.465911135Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda,
+      Conan, Ivy, sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.'
+    digest: b3e71017f161c53662f204cfe14a7c4e306de78e091535f179f844cf69f976ac
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.13.1/openartifact-0.13.1.tgz
+    version: 0.13.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: changed
           description: Default image OpenArtifact 0.16.0 (migrations 004-007 apply on start, no behavior change by default). Adds the proxy minimum-age gate, package curation rules, service accounts with CI OIDC token exchange, repository activity and the web UI additions. Chart templates unchanged.
         - kind: security
@@ -1052,4 +1101,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T00:43:26.139547105Z"
+generated: "2026-11-01T01:43:38.466041388Z"
