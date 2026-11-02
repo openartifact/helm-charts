@@ -92,10 +92,12 @@ config:
   # An administrator can override it at runtime (system setting projects.self_create).
   projectsSelfCreate: false
 
-# -- Docker/OCI blob upload staging. All keys are optional; unset keys keep the
-# server default (staging in <tmp>/openartifact/docker-uploads on the /tmp emptyDir,
-# sessions idle for 24h are removed). Set `dir` to stage uploads on a dedicated
-# volume (sizeLimit, or persistence) instead of the /tmp scratch volume.
+# -- Docker/OCI blob upload settings. All keys are optional; unset keys keep the
+# server default (sessions idle for 24h are removed). Chunks of in-progress uploads live in
+# the blob store (filesystem, S3-compatible, Azure), so any replica can take any request of a
+# push and no shared volume is needed. `dir` matters only with storage.type=oci, which cannot
+# hold chunks: there it must be shared by all replicas (persistence with ReadWriteMany) or run
+# one replica. Set it to stage on a dedicated volume instead of the /tmp scratch volume.
 dockerUploads:
   # -- OPENARTIFACT_DOCKER_UPLOAD_DIR (absolute path). Empty = server default under /tmp.
   dir: ""
