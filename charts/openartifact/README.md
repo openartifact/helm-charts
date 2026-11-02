@@ -44,6 +44,15 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.14.0 (OpenArtifact 0.17.0)
+
+- Migrations `008` and `009` run on start; nothing to do. Chart templates are unchanged.
+- Docker pushes now work across replicas without a shared upload volume (chunks are kept in
+  the blob store). With `storage.type=oci`, `dockerUploads.dir` must still be shared by all
+  replicas or you run one.
+- `/healthz`, `/livez` and `/readyz` are real probes now. The new `huggingface` format
+  (proxy and group) needs no chart value.
+
 ## Upgrading to 0.12.0 (OpenArtifact 0.15.0)
 
 **Breaking: 0.15 cannot be upgraded in place.** The package tables were replaced and the
@@ -357,10 +366,11 @@ the backend must accept OTLP profiles.
   (the server default), `database.maxOpenConns` must be 0 or at least 4; the chart refuses
   smaller values unless `tiering.enabled=false`.
 - The root filesystem is read-only; `/tmp` is an `emptyDir` (`tmp.sizeLimit`, `tmp.medium`)
-  where uploads and proxy downloads are spooled. Docker/OCI blob uploads are staged under
-  `/tmp/openartifact/docker-uploads` by default; set `dockerUploads.dir` to give them a
-  dedicated `emptyDir` (`dockerUploads.sizeLimit`) or PVC (`dockerUploads.persistence.*`),
-  and `dockerUploads.ttl` for the idle-session lifetime.
+  where uploads and proxy downloads are spooled. Docker/OCI blob upload chunks live in the
+  blob store, so replicas need no shared volume; only `storage.type=oci` stages them under
+  `dockerUploads.dir` (default `/tmp/openartifact/docker-uploads`), which must then be shared
+  by all replicas (`dockerUploads.persistence.*` with ReadWriteMany) or run one replica.
+  `dockerUploads.ttl` sets the idle-session lifetime.
 - `config.projectsSelfCreate` lets any authenticated user create projects.
 
 ## Web UI as an installable app (PWA)
