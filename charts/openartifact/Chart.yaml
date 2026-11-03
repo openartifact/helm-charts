@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.
 type: application
-version: 0.15.0
-appVersion: "0.18.0"
+version: 0.16.0
+appVersion: "0.19.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,7 +31,7 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: Default image OpenArtifact 0.18.0. The oa CLI moves to cobra (long flags need two dashes, repo create needs --format, names start with a letter or digit; see the application upgrade notes) and gains shell completion, and the MCP server gets six read-only tools. No migration needing action, no new settings. Chart templates unchanged.
+      description: Default image OpenArtifact 0.19.0. Migrations 010 to 013 run on start (no action needed). Deb and RPM repositories publish gzip indexes only (no .xz), Docker pushes in progress during the upgrade must be retried, the repository list counts lag up to 15 s, and the image ships one binary (oa is a link to the server binary). On filesystem storage uploads are spooled under the storage path (spool directory). Chart templates unchanged.
     - kind: security
       description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
   artifacthub.io/signKey: |
@@ -39,7 +39,7 @@ annotations:
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.18.0
+      image: ghcr.io/openartifact/openartifact:0.19.0
       platforms:
         - linux/amd64
         - linux/arm64
