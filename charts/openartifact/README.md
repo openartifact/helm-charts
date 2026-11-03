@@ -44,6 +44,15 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.15.0 (OpenArtifact 0.18.0)
+
+- No migration needs action and the chart templates and values are unchanged.
+- The `oa` CLI is rebuilt on cobra: long flags take two dashes (`--format json`), `oa repo create` requires
+  `--format`, repository and project names start with a letter or digit, and extra positional arguments are
+  errors. If a Job or hook of yours calls `oa`, check it against the "What you must do" list of the
+  [0.18.0 upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md).
+- With `MCP_ENABLED=true` the MCP server offers six more read-only tools (16 in total).
+
 ## Upgrading to 0.14.0 (OpenArtifact 0.17.0)
 
 - Migrations `008` and `009` run on start; nothing to do. Chart templates are unchanged.
