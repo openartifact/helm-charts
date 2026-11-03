@@ -44,6 +44,17 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.16.0 (OpenArtifact 0.19.0)
+
+- Migrations `010` to `013` run on start; nothing to do. The chart templates and values are unchanged.
+- Docker pushes in progress during the upgrade fail with `BLOB_UPLOAD_UNKNOWN`; the client retries them.
+  Deb and RPM repositories no longer publish `.xz` indexes (gzip only).
+- The image ships one binary and `oa` is a link to it, so a Job or hook that runs `oa` is unchanged.
+- On `filesystem` storage the server spools uploads in `<storage.path>/spool`, on the persistent volume
+  (writable with the chart's `fsGroup`; the root filesystem stays read-only).
+- Two new settings are reachable through `extraEnv`: `OPENARTIFACT_REPO_STATS_INTERVAL` (repository list
+  figures, default `15s`) and `DB_DOWNLOAD_COUNT_FLUSH_INTERVAL` (download counters, default `5s`).
+
 ## Upgrading to 0.15.0 (OpenArtifact 0.18.0)
 
 - No migration needs action and the chart templates and values are unchanged.
