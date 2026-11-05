@@ -44,6 +44,14 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.16.2 (OpenArtifact 0.19.2)
+
+- Take a database backup first if you may roll back: new and re-saved secrets are stored as `enc:v2:`,
+  which earlier releases cannot read.
+- `config.shutdownTimeout` must be at least `1`; the values schema now rejects `0`.
+- If you use the MCP endpoint with OIDC access tokens, set `baseUrl`.
+- Chart templates and values are otherwise unchanged.
+
 ## Upgrading to 0.16.1 (OpenArtifact 0.19.1)
 
 - Fix release. Migration `014` (journal triggers for release bundles) runs on start; nothing to do.

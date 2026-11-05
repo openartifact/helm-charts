@@ -59,7 +59,7 @@
         "ipAllowlist": { "type": "array", "items": { "type": "string" } },
         "rateLimitRps": { "type": "integer", "minimum": 0 },
         "migrateOnStart": { "type": "boolean" },
-        "shutdownTimeout": { "type": "integer", "minimum": 0 },
+        "shutdownTimeout": { "type": "integer", "minimum": 1 },
         "shutdownDelay": { "type": "integer", "minimum": 0 },
         "projectsSelfCreate": { "type": "boolean" },
         "role": { "enum": ["all", "web", "worker"] },
