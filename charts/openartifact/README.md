@@ -44,6 +44,19 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.18.0 (OpenArtifact 0.21.0)
+
+- Migrations `020` to `025` run on start; they are additive (`021` builds one index concurrently).
+- Proxy and group downloads refused by a policy now answer `403` with a JSON body
+  (`code: BLOCKED_BY_POLICY`) and an `X-OA-Block-Reason` header. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#0210).
+- The new settings have no dedicated values; set them with `extraEnv`: `OPENARTIFACT_QUAY_API_ENABLED`
+  and `OPENARTIFACT_QUAY_API_ORGANIZATIONS` (Quay-compatible API for the Konflux image-controller,
+  needs the secret key), `OPENARTIFACT_PROXY_GO_SUMDB_HOSTS`. CI OIDC trust policies in
+  `serviceaccount` discovery mode read the cluster's keys with the pod's own token, so they need
+  `serviceAccount.automountServiceAccountToken=true`.
+- Chart templates and values are otherwise unchanged.
+
 ## Upgrading to 0.17.0 (OpenArtifact 0.20.0)
 
 - Migrations `015` to `019` run on start. `015` builds indexes concurrently, which can take a while
