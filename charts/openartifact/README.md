@@ -44,6 +44,15 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.17.0 (OpenArtifact 0.20.0)
+
+- Migrations `015` to `019` run on start. `015` builds indexes concurrently, which can take a while
+  on large `proxy_cache` or `package_versions` tables; allow for it in the startup probe.
+- CI jobs calling the vulnerability gate now get `pass:false` for an unfinished scan or a missing
+  exploit feed, and every format answers `404` for a repository of another format. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#0200).
+- Chart templates and values are unchanged.
+
 ## Upgrading to 0.16.2 (OpenArtifact 0.19.2)
 
 - Take a database backup first if you may roll back: new and re-saved secrets are stored as `enc:v2:`,
