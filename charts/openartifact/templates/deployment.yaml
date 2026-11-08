@@ -485,6 +485,16 @@ spec:
             {{- end }}
             {{- end }}
             {{- end }}
+            {{- with .Values.telemetry.frontend }}
+            {{- if .enabled }}
+            - name: OPENARTIFACT_TELEMETRY_FRONTEND_ENABLED
+              value: "true"
+            {{- with include "openartifact.frontendEndpoint" $root }}
+            - name: OPENARTIFACT_TELEMETRY_FRONTEND_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.pprof.enabled }}
             - name: OPENARTIFACT_PPROF_ENABLED
               value: "true"

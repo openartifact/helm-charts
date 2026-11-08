@@ -654,6 +654,14 @@
             }
           }
         },
+        "frontend": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "endpoint": { "type": "string" }
+          }
+        },
         "collector": {
           "type": "object",
           "additionalProperties": false,

@@ -227,6 +227,17 @@ telemetry:
     # (k=v,k2=v2, values percent-encoded) under `headersSecretKey`. Never put them in values.
     headersExistingSecret: ""
     headersSecretKey: OTEL_EXPORTER_OTLP_HEADERS
+  # -- EXPERIMENTAL browser telemetry (app 0.20.0 or newer): the web UI sends errors, web vitals
+  # and API client spans to a same-origin relay in the server, which forwards them as OTLP/HTTP.
+  # Needs telemetry.otlp.enabled. The Collector sidecar redacts URLs and query strings on its
+  # traces and logs pipelines (redaction/frontend); without it, redact in your own Collector.
+  frontend:
+    # -- OPENARTIFACT_TELEMETRY_FRONTEND_ENABLED.
+    enabled: false
+    # -- OTLP/HTTP base URL the relay forwards to (OPENARTIFACT_TELEMETRY_FRONTEND_ENDPOINT).
+    # Empty with telemetry.collector.enabled = http://localhost:4318 (the sidecar); empty without
+    # it = telemetry.otlp.endpoint, which then needs telemetry.otlp.protocol=http.
+    endpoint: ""
   # -- OpenTelemetry Collector (contrib) sidecar, off by default. Requires telemetry.otlp.enabled
   # with an empty telemetry.otlp.endpoint: the app then exports to the sidecar on localhost
   # (telemetry.otlp.protocol picks grpc or http), and telemetry.otlp.headersExistingSecret is
@@ -237,9 +248,9 @@ telemetry:
     image:
       registry: docker.io
       repository: otel/opentelemetry-collector-contrib
-      tag: 0.163.2
+      tag: 0.165.0
       # -- Image digest (sha256:...) of the multi-arch index for `tag`; takes precedence over the tag when set.
-      digest: sha256:7f22d2a6748110ffb6a59bc0df448bccbf501cdb667d610ede4c61d3863d5849
+      digest: sha256:e40d61f10c9a617cca1ffd1be4d7e2b3a4b0f0001798ff07e58cabe82e618cea
       pullPolicy: IfNotPresent
     resources:
       requests:

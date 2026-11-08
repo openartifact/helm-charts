@@ -108,6 +108,97 @@ jobs:
           # egress restricted the policy would drop its request to the Service.
           helm template t charts/openartifact --set database.external.host=pg --show-only templates/tests/test-connection.yaml |
             grep -q 'app.kubernetes.io/name: openartifact-test$'
+          # Telemetry: every misconfiguration must fail to render.
+          reject() {
+            local why=$1
+            shift
+            if helm template t charts/openartifact --set database.external.host=pg "$@" >/dev/null 2>&1; then
+              echo "expected render failure for $why" >&2
+              exit 1
+            fi
+          }
+          reject "telemetry.otlp.headersExistingSecret without telemetry.otlp.enabled" \
+            --set telemetry.otlp.headersExistingSecret=h
+          reject "telemetry.collector.enabled without telemetry.otlp.enabled" \
+            --set telemetry.collector.enabled=true --set telemetry.collector.exporter.endpoint=http://b:4318 --set telemetry.collector.exporter.protocol=http
+          reject "telemetry.collector.enabled with telemetry.otlp.endpoint" \
+            --set telemetry.otlp.enabled=true --set telemetry.otlp.endpoint=x:4317 \
+            --set telemetry.collector.enabled=true --set telemetry.collector.exporter.endpoint=b:4317
+          reject "telemetry.collector.enabled without telemetry.collector.exporter.endpoint" \
+            --set telemetry.otlp.enabled=true --set telemetry.collector.enabled=true
+          reject "telemetry.collector.exporter.protocol=http with a non-URL endpoint" \
+            --set telemetry.otlp.enabled=true --set telemetry.collector.enabled=true \
+            --set telemetry.collector.exporter.protocol=http --set telemetry.collector.exporter.endpoint=backend:4318
+          reject "telemetry.collector.pprof.enabled without the sidecar" \
+            --set telemetry.collector.pprof.enabled=true --set pprof.enabled=true --set telemetry.collector.pprof.tokenExistingSecret=t
+          reject "telemetry.collector.pprof.enabled without pprof.enabled" \
+            --set telemetry.otlp.enabled=true --set telemetry.collector.enabled=true --set telemetry.collector.exporter.endpoint=b:4317 \
+            --set telemetry.collector.pprof.enabled=true --set telemetry.collector.pprof.tokenExistingSecret=t
+          reject "telemetry.collector.pprof.enabled without tokenExistingSecret" \
+            --set telemetry.otlp.enabled=true --set telemetry.collector.enabled=true --set telemetry.collector.exporter.endpoint=b:4317 \
+            --set telemetry.collector.pprof.enabled=true --set pprof.enabled=true
+          # Frontend telemetry: needs the OTLP master switch, an http(s) URL and an OTLP/HTTP target.
+          reject "telemetry.frontend.enabled without telemetry.otlp.enabled" \
+            --set telemetry.frontend.enabled=true --set telemetry.frontend.endpoint=http://c:4318
+          reject "telemetry.frontend.endpoint that is not an http(s) URL" \
+            --set telemetry.otlp.enabled=true --set telemetry.frontend.enabled=true --set telemetry.frontend.endpoint=c:4318
+          reject "telemetry.frontend.enabled with protocol grpc and no telemetry.frontend.endpoint" \
+            --set telemetry.otlp.enabled=true --set telemetry.otlp.protocol=grpc --set telemetry.otlp.endpoint=c:4317 --set telemetry.frontend.enabled=true
+          reject "telemetry.frontend.enabled without any endpoint" \
+            --set telemetry.otlp.enabled=true --set telemetry.otlp.protocol=http --set telemetry.frontend.enabled=true
+          # Frontend telemetry renders its env vars; the sidecar is the default relay target.
+          helm template t charts/openartifact -f charts/openartifact/ci/collector-sidecar-values.yaml --set telemetry.frontend.enabled=true >/tmp/frontend.yaml
+          grep -q 'OPENARTIFACT_TELEMETRY_FRONTEND_ENABLED' /tmp/frontend.yaml
+          grep -A1 'OPENARTIFACT_TELEMETRY_FRONTEND_ENDPOINT' /tmp/frontend.yaml | grep -q 'http://localhost:4318'
+          helm template t charts/openartifact -f charts/openartifact/ci/collector-sidecar-values.yaml --show-only templates/collector-configmap.yaml |
+            grep -c 'processors: \[memory_limiter, redaction/frontend, batch\]' | grep -qx 2
+          # OTLP egress port per endpoint form. A marker CIDR picks the OTLP rule out of the policy.
+          otlp_port() {
+            helm template t charts/openartifact --set database.external.host=pg \
+              --set networkPolicy.enabled=true --set networkPolicy.egress.enabled=true \
+              --set telemetry.otlp.enabled=true \
+              --set 'networkPolicy.egress.otlp.to[0].ipBlock.cidr=203.0.113.7/32' "$@" \
+              --show-only templates/networkpolicy.yaml |
+              grep -B6 'cidr: 203.0.113.7/32' | grep -o 'port: [0-9]*' | tail -n 1 | cut -d' ' -f2
+          }
+          assert_port() {
+            local want=$1 got
+            shift
+            got=$(otlp_port "$@")
+            if [ "$got" != "$want" ]; then
+              echo "OTLP egress port: expected $want, got '$got' for: $*" >&2
+              exit 1
+            fi
+          }
+          assert_port 443 --set telemetry.otlp.endpoint=https://otlp.example.com --set telemetry.otlp.protocol=http
+          assert_port 80 --set telemetry.otlp.endpoint=http://otlp.example.com --set telemetry.otlp.protocol=http
+          assert_port 4318 --set telemetry.otlp.endpoint=https://otlp.example.com:4318 --set telemetry.otlp.protocol=http
+          assert_port 4317 --set telemetry.otlp.endpoint=otel-collector:4317 --set telemetry.otlp.protocol=grpc
+          assert_port 4317 --set telemetry.otlp.endpoint=otel-collector --set telemetry.otlp.protocol=grpc
+          assert_port 4318 --set telemetry.otlp.endpoint=otel-collector --set telemetry.otlp.protocol=http
+          for ep in "https://otlp.example.com http" "http://otlp.example.com http" "https://otlp.example.com:4318 http" \
+            "otel-collector:4317 grpc" "otel-collector grpc" "otel-collector http"; do
+            read -r endpoint protocol <<<"$ep"
+            assert_port 9999 --set telemetry.otlp.endpoint="$endpoint" --set telemetry.otlp.protocol="$protocol" --set networkPolicy.egress.otlp.port=9999
+          done
+          # With the sidecar, the rule follows the sidecar's exporter endpoint.
+          assert_port 4318 -f charts/openartifact/ci/collector-sidecar-values.yaml
+          assert_port 4317 --set telemetry.collector.enabled=true --set telemetry.collector.exporter.endpoint=backend --set telemetry.collector.exporter.protocol=grpc
+          assert_port 9999 -f charts/openartifact/ci/collector-sidecar-values.yaml --set networkPolicy.egress.otlp.port=9999
+
+      - name: Validate the Collector sidecar configuration
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          # Render the sidecar config with the CI values and let the pinned otelcol-contrib image
+          # (tag and digest from values.yaml, as the chart renders them) validate it.
+          values=charts/openartifact/ci/collector-sidecar-values.yaml
+          image=$(helm template t charts/openartifact -f "$values" | grep -m1 -o 'image: .*opentelemetry-collector-contrib.*' | cut -d' ' -f2 | tr -d '"')
+          test -n "$image"
+          dir=$(mktemp -d)
+          chmod 755 "$dir" # the image runs as a non-root user
+          helm template t charts/openartifact -f "$values" --show-only templates/collector-configmap.yaml |
+            sed -n '/^  config.yaml: |/,$p' | tail -n +2 | sed 's/^    //' >"$dir/config.yaml"
+          docker run --rm -v "$dir:/cfg:ro" "$image" validate --config=/cfg/config.yaml
 
       - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         if: steps.list-changed.outputs.changed == 'true'

@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.
 type: application
-version: 0.16.2
-appVersion: "0.19.2"
+version: 0.17.0
+appVersion: "0.20.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,20 +31,24 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: Default image OpenArtifact 0.19.2, a fix release. New secrets are stored as enc:v2, which earlier releases cannot read (take a database backup before upgrading if you may roll back). MCP with OIDC tokens needs baseUrl. config.shutdownTimeout must be at least 1 (schema now enforces it). Chart templates unchanged.
+      description: Default image OpenArtifact 0.20.0 (Dex connector pinning and vendor icons for SSO, format handlers refuse repositories of another format, per-image docker blob delete, fail-closed vulnerability gate). Migrations 015-019 run on start; 015 builds indexes concurrently and can take a while on large tables. Chart templates unchanged.
+    - kind: added
+      description: Experimental telemetry.frontend.enabled and telemetry.frontend.endpoint (OPENARTIFACT_TELEMETRY_FRONTEND_*, app 0.20.0 or newer). The endpoint defaults to the Collector sidecar (http://localhost:4318); the chart fails without an OTLP/HTTP target.
+    - kind: changed
+      description: The Collector sidecar's traces and logs pipelines run the redaction/frontend processor (URLs and query strings), copied from the app's docker/otel-collector.yaml.
     - kind: security
-      description: Known issue - the optional Collector sidecar image (otel/opentelemetry-collector-contrib 0.163.2, off by default) carries go-jose/v4 4.1.5 (CVE-2026-116587, HIGH, DoS when parsing JWKs with RSA keys; fixed in 4.1.6). No collector release ships the fix yet; it is ignored in CI until 2026-11-27 and the sidecar does not parse untrusted JWKs in the chart's configuration.
+      description: Collector sidecar image otel/opentelemetry-collector-contrib 0.165.0, which ships go-jose/v4 4.1.6 and fixes CVE-2026-116587 (HIGH, DoS when parsing JWKs with RSA keys). The CI ignore entry is removed.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.19.2
+      image: ghcr.io/openartifact/openartifact:0.20.0
       platforms:
         - linux/amd64
         - linux/arm64
     - name: otel-collector
-      image: otel/opentelemetry-collector-contrib:0.163.2
+      image: otel/opentelemetry-collector-contrib:0.165.0
       platforms:
         - linux/amd64
         - linux/arm64
