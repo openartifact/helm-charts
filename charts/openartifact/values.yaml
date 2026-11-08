@@ -227,6 +227,17 @@ telemetry:
     # (k=v,k2=v2, values percent-encoded) under `headersSecretKey`. Never put them in values.
     headersExistingSecret: ""
     headersSecretKey: OTEL_EXPORTER_OTLP_HEADERS
+  # -- EXPERIMENTAL browser telemetry (app 0.20.0 or newer): the web UI sends errors, web vitals
+  # and API client spans to a same-origin relay in the server, which forwards them as OTLP/HTTP.
+  # Needs telemetry.otlp.enabled. The Collector sidecar redacts URLs and query strings on its
+  # traces and logs pipelines (redaction/frontend); without it, redact in your own Collector.
+  frontend:
+    # -- OPENARTIFACT_TELEMETRY_FRONTEND_ENABLED.
+    enabled: false
+    # -- OTLP/HTTP base URL the relay forwards to (OPENARTIFACT_TELEMETRY_FRONTEND_ENDPOINT).
+    # Empty with telemetry.collector.enabled = http://localhost:4318 (the sidecar); empty without
+    # it = telemetry.otlp.endpoint, which then needs telemetry.otlp.protocol=http.
+    endpoint: ""
   # -- OpenTelemetry Collector (contrib) sidecar, off by default. Requires telemetry.otlp.enabled
   # with an empty telemetry.otlp.endpoint: the app then exports to the sidecar on localhost
   # (telemetry.otlp.protocol picks grpc or http), and telemetry.otlp.headersExistingSecret is

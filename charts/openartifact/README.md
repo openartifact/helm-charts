@@ -51,7 +51,15 @@ waits up to `database.connectTimeout` (default `60s`) for the database at startu
 - CI jobs calling the vulnerability gate now get `pass:false` for an unfinished scan or a missing
   exploit feed, and every format answers `404` for a repository of another format. See the
   [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#0200).
-- Chart templates and values are unchanged.
+- New optional `telemetry.frontend.enabled` / `telemetry.frontend.endpoint` render
+  `OPENARTIFACT_TELEMETRY_FRONTEND_ENABLED` / `_ENDPOINT` (experimental browser telemetry, off by
+  default). The Collector sidecar's traces and logs pipelines now run a `redaction/frontend`
+  processor (URLs and query strings), always, as in the app's `docker/otel-collector.yaml`. With
+  the sidecar enabled the exported spans and log records change accordingly; set
+  `telemetry.collector.config` to keep your own pipeline. See [OpenTelemetry](#opentelemetry).
+- The sidecar image is `otel/opentelemetry-collector-contrib` 0.165.0 (go-jose 4.1.6, fixes
+  CVE-2026-116587).
+- Nothing else changes with the new values unset.
 
 ## Upgrading to 0.16.2 (OpenArtifact 0.19.2)
 
@@ -362,6 +370,24 @@ dials: the port of a URL endpoint, else `443` for `https://` and `80` for `http:
 of a `host:port` endpoint, else `4317` (grpc) or `4318` (http).
 `networkPolicy.egress.otlp.port` overrides it.
 
+### Frontend telemetry (experimental)
+
+With app 0.20.0 or newer, `telemetry.frontend.enabled=true` renders
+`OPENARTIFACT_TELEMETRY_FRONTEND_ENABLED=true`: the web UI sends browser errors, web vitals and
+API client spans to a same-origin relay in the server, which forwards them as OTLP/HTTP. It needs
+`telemetry.otlp.enabled=true`. The relay target (`OPENARTIFACT_TELEMETRY_FRONTEND_ENDPOINT`) is
+`telemetry.frontend.endpoint` when set; else `http://localhost:4318` with
+`telemetry.collector.enabled` (the sidecar); else `telemetry.otlp.endpoint`, which then has to be
+OTLP/HTTP (`telemetry.otlp.protocol=http`). The chart fails to render without such a target, and
+for a `telemetry.frontend.endpoint` that is not an `http(s)://` URL. The sidecar masks URLs and
+query strings (`redaction/frontend`) before exporting traces and logs; without the sidecar, do it in
+your own Collector.
+
+| Value | Meaning |
+|---|---|
+| `telemetry.frontend.enabled` | Turn the browser telemetry on (default `false`). |
+| `telemetry.frontend.endpoint` | OTLP/HTTP base URL the relay forwards to; empty = sidecar, else `telemetry.otlp.endpoint`. |
+
 ### Collector sidecar
 
 `telemetry.collector.enabled=true` runs an [OpenTelemetry Collector
@@ -370,7 +396,7 @@ sidecar: it starts before the app and stops after it, has a liveness probe and n
 probe, so it never gates the app's readiness. It needs `telemetry.otlp.enabled=true` with an
 empty `telemetry.otlp.endpoint`: the app then exports to `localhost:4317` (grpc) or
 `http://localhost:4318` (http, per `telemetry.otlp.protocol`) and the sidecar forwards traces,
-metrics and logs to `telemetry.collector.exporter.endpoint` through `memory_limiter`, `batch`
+metrics and logs to `telemetry.collector.exporter.endpoint` through `memory_limiter`, `redaction/frontend` (traces and logs), `batch`
 and a `file_storage` sending queue on an `emptyDir`. The queue survives container restarts,
 not the loss of the pod. The NetworkPolicy egress rule is then derived from the exporter
 endpoint; localhost traffic is not subject to it.

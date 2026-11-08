@@ -32,6 +32,10 @@ annotations:
   artifacthub.io/changes: |
     - kind: changed
       description: Default image OpenArtifact 0.20.0 (Dex connector pinning and vendor icons for SSO, format handlers refuse repositories of another format, per-image docker blob delete, fail-closed vulnerability gate). Migrations 015-019 run on start; 015 builds indexes concurrently and can take a while on large tables. Chart templates unchanged.
+    - kind: added
+      description: Experimental telemetry.frontend.enabled and telemetry.frontend.endpoint (OPENARTIFACT_TELEMETRY_FRONTEND_*, app 0.20.0 or newer). The endpoint defaults to the Collector sidecar (http://localhost:4318); the chart fails without an OTLP/HTTP target.
+    - kind: changed
+      description: The Collector sidecar's traces and logs pipelines run the redaction/frontend processor (URLs and query strings), copied from the app's docker/otel-collector.yaml.
     - kind: security
       description: Collector sidecar image otel/opentelemetry-collector-contrib 0.165.0, which ships go-jose/v4 4.1.6 and fixes CVE-2026-116587 (HIGH, DoS when parsing JWKs with RSA keys). The CI ignore entry is removed.
   artifacthub.io/signKey: |

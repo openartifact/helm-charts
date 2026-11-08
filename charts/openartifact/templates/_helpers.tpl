@@ -153,6 +153,17 @@ processors:
     limit_percentage: 80
     spike_limit_percentage: 25
   batch: {}
+  # Masks what the browser can put into error events and spans: URLs, and query strings in
+  # messages and stack traces. Copied from the app's docker/otel-collector.yaml; it applies to
+  # the server's own traces and logs too.
+  redaction/frontend:
+    allow_all_keys: true
+    blocked_key_patterns:
+      - '^url\.(full|path|query)$'
+      - '^browser\.document\.url\.'
+    blocked_values:
+      - '[?&][^=&\s]+=[^&\s)]*'
+    summary: silent
 exporters:
   {{ $exporter }}:
     endpoint: {{ $endpoint | quote }}
@@ -171,7 +182,7 @@ service:
     {{- range $pipelines }}
     {{ . }}:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, {{ if has . (list "traces" "logs") }}redaction/frontend, {{ end }}batch]
       exporters: [{{ $exporter }}]
     {{- end }}
     {{- if $c.pprof.enabled }}
@@ -267,6 +278,17 @@ URL endpoint: its port, else 443 for https:// and 80 for http://. host[:port]: i
 {{- $port }}
 {{- end }}
 
+{{/*
+OTLP/HTTP base URL the frontend telemetry relay forwards to (OPENARTIFACT_TELEMETRY_FRONTEND_ENDPOINT):
+telemetry.frontend.endpoint, else the sidecar on localhost, else empty (the app then uses telemetry.otlp.endpoint).
+*/}}
+{{- define "openartifact.frontendEndpoint" -}}
+{{- $t := .Values.telemetry }}
+{{- if $t.frontend.endpoint }}{{ $t.frontend.endpoint }}
+{{- else if $t.collector.enabled }}http://localhost:4318
+{{- end }}
+{{- end }}
+
 {{- define "openartifact.validate" -}}
 {{- $multi := or .Values.autoscaling.enabled .Values.worker.enabled (gt (int .Values.replicaCount) 1) }}
 {{- if and $multi (include "openartifact.filesystemStorage" .) (not .Values.persistence.enabled) }}
@@ -337,6 +359,19 @@ URL endpoint: its port, else 443 for https:// and 80 for http://. host[:port]: i
 {{- end }}
 {{- if and .Values.telemetry.otlp.headersExistingSecret (not .Values.telemetry.otlp.enabled) }}
 {{- fail "telemetry.otlp.headersExistingSecret requires telemetry.otlp.enabled=true" }}
+{{- end }}
+{{- with .Values.telemetry.frontend }}
+{{- if .enabled }}
+{{- if not $.Values.telemetry.otlp.enabled }}
+{{- fail "telemetry.frontend.enabled requires telemetry.otlp.enabled=true" }}
+{{- end }}
+{{- if and .endpoint (not (regexMatch "^https?://[^/?#]+[^?#]*$" .endpoint)) }}
+{{- fail "telemetry.frontend.endpoint must be an http(s) URL without query or fragment" }}
+{{- end }}
+{{- if and (not (include "openartifact.frontendEndpoint" $)) (or (not (hasPrefix "http" ($.Values.telemetry.otlp.protocol | default ""))) (not $.Values.telemetry.otlp.endpoint)) }}
+{{- fail "telemetry.frontend.enabled needs an OTLP/HTTP target: set telemetry.frontend.endpoint, enable telemetry.collector, or use telemetry.otlp.protocol=http with telemetry.otlp.endpoint" }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- with .Values.telemetry.collector }}
 {{- if .enabled }}
