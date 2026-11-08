@@ -109,7 +109,6 @@ jobs:
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          trivyignores: ${{ startsWith(matrix.image, 'otel/') && '.trivyignore.yaml' || '' }}
           limit-severities-for-sarif: true
           format: sarif
           output: trivy-image.sarif
@@ -129,7 +128,6 @@ jobs:
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          trivyignores: ${{ startsWith(matrix.image, 'otel/') && '.trivyignore.yaml' || '' }}
           format: table
           exit-code: "1"
 

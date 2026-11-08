@@ -237,9 +237,9 @@ telemetry:
     image:
       registry: docker.io
       repository: otel/opentelemetry-collector-contrib
-      tag: 0.163.2
+      tag: 0.165.0
       # -- Image digest (sha256:...) of the multi-arch index for `tag`; takes precedence over the tag when set.
-      digest: sha256:7f22d2a6748110ffb6a59bc0df448bccbf501cdb667d610ede4c61d3863d5849
+      digest: sha256:e40d61f10c9a617cca1ffd1be4d7e2b3a4b0f0001798ff07e58cabe82e618cea
       pullPolicy: IfNotPresent
     resources:
       requests:
