@@ -44,6 +44,16 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.19.0 (OpenArtifact 0.22.0)
+
+- Migrations `026` and `027` run on start; they are additive (`027_vex_import_validate` validates
+  a widened constraint without locking writes).
+- `GET /api/v1/repositories/{name}/license/scans` now pages (50 per page by default); scripts that
+  read it must follow `has_more`. A custom `mcp.httpPath` set through `extraEnv` must start with `/`,
+  not end with `/` and not overlap `/api`, `/repos`, `/v2`, `/federation` or `/.well-known`. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#0220).
+- Chart templates and values are unchanged.
+
 ## Upgrading to 0.18.0 (OpenArtifact 0.21.0)
 
 - Migrations `020` to `025` run on start; they are additive (`021` builds one index concurrently).
