@@ -4,6 +4,53 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Default image OpenArtifact 0.22.0 (vendor CSAF VEX feeds, VEX decisions shared between federated peers, client protocol, group metadata, auth and quota fixes). Migrations 026-027 run on start; all additive. Chart templates unchanged.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.22.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.165.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.22.0
+    created: "2026-11-09T15:04:14.987339547Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems,
+      Conda, Conan, Ivy, sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.'
+    digest: 2ce0526648c59100a0e7a15a68ff4b996bbd39e1ff9aa389961dbf76bf6fdb31
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.19.0/openartifact-0.19.0.tgz
+    version: 0.19.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Default image OpenArtifact 0.21.0 (Konflux and Tekton integration, Quay-compatible API, attestations and provenance-gated promotion, bundle checks, CI OIDC key discovery for Kubernetes service accounts). Migrations 020-025 run on start; all additive. Chart templates unchanged.
       artifacthub.io/images: |
         - name: openartifact
@@ -1495,4 +1542,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-08T19:13:58.007624368Z"
+generated: "2026-11-09T15:04:14.987700362Z"
