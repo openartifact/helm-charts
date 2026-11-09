@@ -9,8 +9,8 @@ description: >-
   Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
   sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.
 type: application
-version: 0.19.0
-appVersion: "0.22.0"
+version: 0.20.0
+appVersion: "0.23.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -31,13 +31,13 @@ annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
     - kind: changed
-      description: Default image OpenArtifact 0.22.0 (vendor CSAF VEX feeds, VEX decisions shared between federated peers, client protocol, group metadata, auth and quota fixes). Migrations 026-027 run on start; all additive. Chart templates unchanged.
+      description: Default image OpenArtifact 0.23.0 (search by project and "Shared with me", file names in property search, federation conflicts counted only for concurrent writes, 503 instead of 401/500 when the database fails during authentication). Migration 028 runs on start; additive. Chart templates unchanged.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.22.0
+      image: ghcr.io/openartifact/openartifact:0.23.0
       platforms:
         - linux/amd64
         - linux/arm64
