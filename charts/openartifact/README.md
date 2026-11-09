@@ -44,6 +44,15 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.20.0 (OpenArtifact 0.23.0)
+
+- Migration `028` runs on start; it is additive (nullable columns on `federation_units`).
+- While the database cannot answer, authenticated requests get `503` with `Retry-After` instead of
+  `401` or `500`; clients that treat any non-2xx as a bad credential should retry on `503`. In a
+  search query, `project:` and `project_role:` are now filters. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#0230).
+- Chart templates and values are unchanged.
+
 ## Upgrading to 0.19.0 (OpenArtifact 0.22.0)
 
 - Migrations `026` and `027` run on start; they are additive (`027_vex_import_validate` validates
