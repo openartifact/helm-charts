@@ -200,7 +200,7 @@ jobs:
             sed -n '/^  config.yaml: |/,$p' | tail -n +2 | sed 's/^    //' >"$dir/config.yaml"
           docker run --rm -v "$dir:/cfg:ro" "$image" validate --config=/cfg/config.yaml
 
-      - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+      - uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
         if: steps.list-changed.outputs.changed == 'true'
 
       - name: Install CloudNativePG operator
