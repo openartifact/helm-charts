@@ -4,6 +4,53 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Default image OpenArtifact 0.24.0 (search by property, batch availability checks through a group, oa check for composer.lock and package-lock.json, Composer minimum-age and client setup fixes). Migration 029 runs on start; additive (CREATE INDEX CONCURRENTLY). Chart templates unchanged.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.24.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.165.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.24.0
+    created: "2026-11-13T17:56:19.757333862Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems,
+      Conda, Conan, Ivy, sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.'
+    digest: e5fea5ba5b10e030e56d5a8c82ecec89184f806474566a91a4b4cde51226e4b7
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.21.0/openartifact-0.21.0.tgz
+    version: 0.21.0
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Default image OpenArtifact 0.23.0 (search by project and "Shared with me", file names in property search, federation conflicts counted only for concurrent writes, 503 instead of 401/500 when the database fails during authentication). Migration 028 runs on start; additive. Chart templates unchanged.
       artifacthub.io/images: |
         - name: openartifact
@@ -1589,4 +1636,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-09T22:15:36.52151341Z"
+generated: "2026-11-13T17:56:19.757522322Z"
