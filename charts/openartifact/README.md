@@ -44,6 +44,13 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.21.0 (OpenArtifact 0.24.0)
+
+- Migration `029` runs on start; it is additive (an index built with `CREATE INDEX CONCURRENTLY`,
+  so writes are not blocked). See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/main/docs/getting-started/upgrading.md#0240).
+- Chart templates and values are unchanged.
+
 ## Upgrading to 0.20.0 (OpenArtifact 0.23.0)
 
 - Migration `028` runs on start; it is additive (nullable columns on `federation_units`).
