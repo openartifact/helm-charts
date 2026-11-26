@@ -44,6 +44,14 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.22.1 (OpenArtifact 0.25.1)
+
+- Security fix: curation version rules on PyPI proxies hold every spelling of a release
+  ([GHSA-8483-q77r-q9xm](https://github.com/openartifact/openartifact/security/advisories/GHSA-8483-q77r-q9xm)).
+- No migrations. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/v0.25.1/docs/getting-started/upgrading.md#0251).
+- Chart templates and values are unchanged.
+
 ## Upgrading to 0.22.0 (OpenArtifact 0.25.0)
 
 - No migrations. See the
