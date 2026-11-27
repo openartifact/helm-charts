@@ -7,10 +7,11 @@ name: openartifact
 description: >-
   Self-hosted artifact repository for many package formats: Maven, npm, PyPI,
   Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems, Conda, Conan, Ivy,
-  sbt, Terraform, Alpine, Arch, Nix, Ansible and raw.
+  sbt, Terraform, Alpine, Arch, Nix, Ansible, Swift, CocoaPods, Pub, CRAN, Git LFS, Eclipse p2
+  and raw.
 type: application
-version: 0.22.1
-appVersion: "0.25.1"
+version: 0.23.0
+appVersion: "0.26.0"
 kubeVersion: ">=1.29.0-0"
 home: https://github.com/openartifact/openartifact
 icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
@@ -30,19 +31,16 @@ maintainers:
 annotations:
   artifacthub.io/license: AGPL-3.0-or-later
   artifacthub.io/changes: |
-    - kind: security
-      description: Default image OpenArtifact 0.25.1, which fixes curation version rules on PyPI proxies being bypassed by other spellings of the same version (GHSA-8483-q77r-q9xm).
-      links:
-        - name: GHSA-8483-q77r-q9xm
-          url: https://github.com/openartifact/openartifact/security/advisories/GHSA-8483-q77r-q9xm
+    - kind: added
+      description: Default image OpenArtifact 0.26.0, with six new formats (Swift, CocoaPods, Pub, CRAN, Git LFS and Eclipse p2), publishing through a group to a hosted deploy target, and copy and move of artifacts between hosted repositories.
     - kind: changed
-      description: OpenArtifact 0.25.1 also accepts an empty body on the AI analysis trigger and updates dependencies. No migrations. Chart templates unchanged.
+      description: OpenArtifact 0.26.0 also gives scoped tokens the intersection of their scopes and the owner's rights, makes the AI connection test use the effective configuration and updates dependencies. Repositories named cran, gitlfs, p2, pub or swift must be renamed before upgrading. Migrations 030 to 033 run on start; additive. Chart templates unchanged.
   artifacthub.io/signKey: |
     fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
     url: https://openartifact.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/images: |
     - name: openartifact
-      image: ghcr.io/openartifact/openartifact:0.25.1
+      image: ghcr.io/openartifact/openartifact:0.26.0
       platforms:
         - linux/amd64
         - linux/arm64
