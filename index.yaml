@@ -3,6 +3,56 @@ entries:
   openartifact:
   - annotations:
       artifacthub.io/changes: |
+        - kind: added
+          description: Default image OpenArtifact 0.26.0, with six new formats (Swift, CocoaPods, Pub, CRAN, Git LFS and Eclipse p2), publishing through a group to a hosted deploy target, and copy and move of artifacts between hosted repositories.
+        - kind: changed
+          description: OpenArtifact 0.26.0 also gives scoped tokens the intersection of their scopes and the owner's rights, makes the AI connection test use the effective configuration and updates dependencies. Repositories named cran, gitlfs, p2, pub or swift must be renamed before upgrading. Migrations 030 to 033 run on start; additive. Chart templates unchanged.
+      artifacthub.io/images: |
+        - name: openartifact
+          image: ghcr.io/openartifact/openartifact:0.26.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.165.0
+          platforms:
+            - linux/amd64
+            - linux/arm64
+      artifacthub.io/license: AGPL-3.0-or-later
+      artifacthub.io/signKey: |
+        fingerprint: 2CB218184F573BAAFC532E84D4DE9B5D6FDD2ACD
+        url: https://openartifact.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.26.0
+    created: "2026-11-27T19:16:36.654192581Z"
+    description: 'Self-hosted artifact repository for many package formats: Maven,
+      npm, PyPI, Docker/OCI, Hugging Face, Helm, Debian, RPM, Go, Cargo, NuGet, RubyGems,
+      Conda, Conan, Ivy, sbt, Terraform, Alpine, Arch, Nix, Ansible, Swift, CocoaPods,
+      Pub, CRAN, Git LFS, Eclipse p2 and raw.'
+    digest: 8c899cf663304cd4f29b98e717589f61d233623a70629f5a616f9e9275905b08
+    home: https://github.com/openartifact/openartifact
+    icon: https://raw.githubusercontent.com/openartifact/openartifact/main/docs/assets/logo.png
+    keywords:
+    - artifact-repository
+    - maven
+    - npm
+    - pypi
+    - oci
+    - registry
+    kubeVersion: '>=1.29.0-0'
+    maintainers:
+    - name: The OpenArtifact Authors
+      url: https://github.com/openartifact
+    name: openartifact
+    sources:
+    - https://github.com/openartifact/openartifact
+    - https://github.com/openartifact/helm-charts
+    type: application
+    urls:
+    - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.23.0/openartifact-0.23.0.tgz
+    version: 0.23.0
+  - annotations:
+      artifacthub.io/changes: |
         - kind: security
           description: Default image OpenArtifact 0.25.1, which fixes curation version rules on PyPI proxies being bypassed by other spellings of the same version (GHSA-8483-q77r-q9xm).
           links:
@@ -1735,4 +1785,4 @@ entries:
     urls:
     - https://github.com/openartifact/helm-charts/releases/download/openartifact-0.1.0/openartifact-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-26T20:28:38.957708281Z"
+generated: "2026-11-27T19:16:36.654473544Z"
