@@ -44,6 +44,14 @@ Schema migrations run at startup under a Postgres advisory lock
 waits up to `database.connectTimeout` (default `60s`) for the database at startup;
 `database.waitForDatabase=false` makes it fail at once.
 
+## Upgrading to 0.23.0 (OpenArtifact 0.26.0)
+
+- Rename any repository named `cran`, `gitlfs`, `p2`, `pub` or `swift` before you upgrade:
+  these names are now format prefixes, so such a repository is no longer reachable by its URL.
+- Migrations 030 to 033 run on start; they are additive and take no long lock. See the
+  [upgrade notes](https://github.com/openartifact/openartifact/blob/v0.26.0/docs/getting-started/upgrading.md#0260).
+- Chart templates and values are unchanged.
+
 ## Upgrading to 0.22.1 (OpenArtifact 0.25.1)
 
 - Security fix: curation version rules on PyPI proxies hold every spelling of a release
